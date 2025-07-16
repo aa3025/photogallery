@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image/Video Folder Browser</title>
+    <!-- Tailwind CSS CDN for easy styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for better aesthetics */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Dark background for the body */
+            color: #e2e8f0; /* Light text color for contrast */
+        }
+        .container {
+            width: 100%; /* Make it take full available width */
+            margin: 1rem auto; /* Reduced top/bottom margin, auto left/right for centering */
+            padding: 1.5rem;
+            background-color: #2d3748; /* Slightly lighter dark background for the container */
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); /* Stronger shadow for dark theme */
+        }
+        /* Specific max-width for very large screens */
+        @media (min-width: 1536px) {
+            .container {
+                max-width: 2000px !important; /* Force this max-width for screens 1536px and wider */
+            }
+        }
+        .nav-link {
+            display: inline-block;
+            padding: 0.6rem 1.2rem;
+            margin: 0.4rem;
+            background-color: #4a5568; /* Darker grey for links */
+            color: #e2e8f0; /* Light text for links */
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background-color 0.2s, transform 0.1s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        .nav-link:hover {
+            background-color: #6a768f; /* Lighter grey on hover */
+            color: #fff; /* Changed text color to white on hover */
+            transform: translateY(-2px);
+        }
+        .nav-link.active {
+            background-color: #4f46e5; /* Active blue (can remain vibrant) */
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+        .gallery-item {
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Added shadow to thumbnails */
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            cursor: pointer; /* Indicate clickable */
+            position: relative; /* For play icon overlay */
+        }
+        .gallery-item:hover {
+            transform: scale(1.03);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5); /* Enhanced shadow on hover */
+        }
+        .gallery-item img, .gallery-item video {
+            width: 100%;
+            height: 250px; /* Increased height for larger thumbnails */
+            object-fit: cover; /* Ensures media covers the area without distortion */
+            border-radius: 8px;
+        }
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #cbd5e0; /* Lighter text for titles */
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        .breadcrumb {
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+            color: #a0aec0; /* Lighter grey for breadcrumb */
+        }
+        /* Removed .breadcrumb span rule to prevent conflict */
+        .breadcrumb a {
+            color: #a0aec0;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .breadcrumb a:hover {
+            color: #fff; /* Changed to white on hover */
+        }
+        /* Custom scrollbar for gallery */
+        .gallery-grid {
+            max-height: 70vh; /* Limit height for scrollability */
+            overflow-y: auto;
+            padding-right: 15px; /* Space for scrollbar */
+        }
+        .gallery-grid::-webkit-scrollbar {
+            width: 8px;
+        }
+        .gallery-grid::-webkit-scrollbar-track {
+            background: #2d3748; /* Darker track */
+            border-radius: 10px;
+        }
+        .gallery-grid::-webkit-scrollbar-thumb {
+            background: #6a768f; /* Darker thumb */
+            border-radius: 10px;
+        }
+        .gallery-grid::-webkit-scrollbar-thumb:hover {
+            background: #8892b0; /* Lighter thumb on hover */
+        }
+
+        /* Lightbox/Modal Styles */
+        .lightbox-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95); /* Even darker background for lightbox */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000; /* Ensure it's on top */
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .lightbox-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .lightbox-content {
+            position: relative;
+            max-width: 90vw;
+            max-height: 90vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* Ensure lightbox content can grow */
+            width: 100%;
+            height: 100%;
+        }
+        .lightbox-content .media-display {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain; /* Ensure media fits within the box */
+            border-radius: 8px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7); /* Stronger shadow for lightbox media */
+            /* Added for larger video display */
+            width: auto; /* Allow intrinsic width */
+            height: auto; /* Allow intrinsic height */
+            max-width: 90vw; /* Constrain by viewport width */
+            max-height: 90vh; /* Constrain by viewport height */
+        }
+        /* Specific rule for video elements within media-display to ensure they fill space */
+        .lightbox-content .media-display video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Maintain aspect ratio */
+        }
+        .lightbox-nav-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(255, 255, 255, 0.2); /* Lighter background for arrows */
+            color: white;
+            padding: 1rem 0.8rem;
+            cursor: pointer;
+            font-size: 2rem;
+            border-radius: 8px;
+            user-select: none; /* Prevent text selection */
+            opacity: 0;
+            transition: opacity 0.2s ease, background-color 0.2s ease;
+            z-index: 1010; /* Above the media */
+        }
+        .lightbox-nav-arrow:hover {
+            background-color: rgba(255, 255, 255, 0.4); /* Lighter on hover */
+        }
+        .lightbox-overlay:hover .lightbox-nav-arrow {
+            opacity: 1; /* Show arrows on hover over the entire overlay */
+        }
+        .lightbox-nav-arrow.left {
+            left: 10px;
+        }
+        .lightbox-nav-arrow.right {
+            right: 10px;
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 15px;
+            right: 25px;
+            color: white;
+            font-size: 2.5rem;
+            cursor: pointer;
+            z-index: 1010;
+            opacity: 0.7;
+            transition: opacity 0.2s ease;
+        }
+        .lightbox-close:hover {
+            opacity: 1;
+        }
+
+        /* Play icon for video thumbnails */
+        .video-thumbnail-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.3); /* Slight overlay */
+            pointer-events: none; /* Allow clicks to pass through to the parent gallery-item */
+            border-radius: 8px;
+        }
+        .video-thumbnail-overlay::before {
+            content: '▶'; /* Play icon */
+            font-size: 3rem;
+            color: rgba(255, 255, 255, 0.8);
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        /* Style for the breadcrumb separator */
+        .breadcrumb-separator {
+            margin: 0 0.2rem; /* Space around the separator */
+            color: #e2e8f0 !important; /* Changed to white and added !important for override */
+            font-weight: normal; /* Ensure it's not bold */
+            font-size: 1rem; /* Made arrows 2x bigger */
+        }
+    </style>
+</head>
+<body class="p-4">
+    <div class="container">
+        <h1 class="text-4xl font-extrabold text-center text-indigo-700 mb-8">Image/Video Gallery Browser</h1>
+
+        <div class="breadcrumb mb-6 text-center">
+            <a href="#" id="homeLink" class="nav-link">Home</a>
+            <span id="breadcrumbPath"></span>
+        </div>
+
+        <!-- Navigation Sections -->
+        <div id="yearsSection" class="mb-8">
+            <h2 class="section-title">Years</h2>
+            <div id="yearsContainer" class="flex flex-wrap justify-center gap-4">
+                <!-- Year links will be loaded here -->
+            </div>
+        </div>
+
+        <div id="monthsSection" class="mb-8 hidden">
+            <h2 class="section-title">Months in <span id="currentYear"></span></h2>
+            <div id="monthsContainer" class="flex flex-wrap justify-center gap-4">
+                <!-- Month links will be loaded here -->
+            </div>
+        </div>
+
+        <div id="daysSection" class="mb-8 hidden">
+            <h2 class="section-title">Days in <span id="currentMonthYear"></span></h2>
+            <div id="daysContainer" class="flex flex-wrap justify-center gap-4">
+                <!-- Day links will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Image/Video Gallery Section (for files in year/month/day folders) -->
+        <div id="gallerySection" class="mb-8 hidden">
+            <h2 class="section-title">Media from <span id="currentMediaFolder"></span></h2>
+            <div id="galleryContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 gallery-grid">
+                <!-- Image/Video thumbnails will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox/Modal Structure -->
+    <div id="lightboxOverlay" class="lightbox-overlay">
+        <span id="lightboxClose" class="lightbox-close">&times;</span>
+        <div class="lightbox-content">
+            <span id="lightboxPrev" class="lightbox-nav-arrow left">&lt;</span>
+            <div id="lightboxMediaDisplay" class="media-display">
+                <!-- Image or Video will be loaded here -->
+            </div>
+            <span id="lightboxNext" class="lightbox-nav-arrow right">&gt;</span>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration for Image Library Path ---
+        // This path is used by the HTML to construct media URLs.
+        // It should be the path from the web server's root to your image library's root (the folder containing YYYY folders).
+        // Example: If your server serves from 'http://127.0.0.1:5000/' and media are in 'http://127.0.0.1:5000/my_media/2023/...', set to '/my_media'.
+        // If media are directly under the server root, set to ''.
+        const imageLibraryBasePath = ''; // Set this to the base URL path where your media library is served.
+
+        let currentPath = []; // Stores the current navigation path (e.g., ['2023', '01', '01'])
+        let currentDisplayedMedia = []; // Stores the list of media (files) currently displayed in the gallery grid
+        let currentMediaFolderSegments = []; // Stores the path segments for the currently displayed media (e.g., ['2023'] or ['2023', '01'])
+        let currentMediaIndex = 0; // Stores the index of the currently viewed media in the lightbox
+
+        // Define video extensions for client-side check
+        const videoExtensions = ['.mp4', '.mov', '.webm', '.ogg', '.avi', '.mkv']; // Keep in sync with server.py
+
+        const yearsContainer = document.getElementById('yearsContainer');
+        const monthsContainer = document.getElementById('monthsContainer');
+        const daysContainer = document.getElementById('daysContainer');
+        const galleryContainer = document.getElementById('galleryContainer');
+
+        const yearsSection = document.getElementById('yearsSection');
+        const monthsSection = document.getElementById('monthsSection');
+        const daysSection = document.getElementById('daysSection');
+        const gallerySection = document.getElementById('gallerySection');
+
+        const currentYearSpan = document.getElementById('currentYear');
+        const currentMonthYearSpan = document.getElementById('currentMonthYear');
+        const currentMediaFolderSpan = document.getElementById('currentMediaFolder'); // New span for gallery title
+        const breadcrumbPath = document.getElementById('breadcrumbPath');
+        const homeLink = document.getElementById('homeLink');
+
+        // Lightbox elements
+        const lightboxOverlay = document.getElementById('lightboxOverlay');
+        const lightboxMediaDisplay = document.getElementById('lightboxMediaDisplay');
+        const lightboxPrev = document.getElementById('lightboxPrev');
+        const lightboxNext = document.getElementById('lightboxNext');
+        const lightboxClose = document.getElementById('lightboxClose');
+
+        // Function to update the breadcrumb navigation
+        function updateBreadcrumb() {
+            let pathHtml = '';
+            // Start with the Home link, which already has nav-link class
+            // Add breadcrumb segments with nav-link class and a separator
+            currentPath.forEach((segment, index) => {
+                // Use UTF-8 arrow symbol (U+27A4)
+                pathHtml += `<span class="breadcrumb-separator">&#8680;</span> <a href="#" data-path-index="${index}" class="nav-link">${segment}</a>`;
+            });
+            breadcrumbPath.innerHTML = pathHtml;
+        }
+
+        // Event listener for breadcrumb clicks
+        breadcrumbPath.addEventListener('click', (event) => {
+            if (event.target.classList.contains('nav-link')) { // Changed to nav-link
+                const index = parseInt(event.target.dataset.pathIndex);
+                currentPath = currentPath.slice(0, index + 1);
+                if (currentPath.length === 1) { // Clicked on year
+                    loadMonths(currentPath[0]);
+                } else if (currentPath.length === 2) { // Clicked on month
+                    loadDays(currentPath[0], currentPath[1]);
+                } else if (currentPath.length === 0) { // Clicked on Home (though Home has its own listener)
+                    loadYears();
+                }
+                updateBreadcrumb();
+            }
+        });
+
+        // Home link functionality
+        homeLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            currentPath = [];
+            loadYears();
+            updateBreadcrumb();
+        });
+
+        // Helper function to show loading state
+        function showLoading(container) {
+            container.innerHTML = '<p class="text-center text-gray-600 col-span-full">Loading...</p>';
+        }
+
+        // Helper function to render media thumbnails in the gallery grid
+        function displayMediaThumbnails(mediaFiles, pathSegments) {
+            currentDisplayedMedia = mediaFiles.sort(); // Store and sort the files for lightbox navigation
+            currentMediaFolderSegments = pathSegments; // Store path for media URL construction
+
+            galleryContainer.innerHTML = ''; // Clear previous content
+
+            if (currentDisplayedMedia.length > 0) {
+                gallerySection.classList.remove('hidden'); // Show gallery section if files exist
+                currentDisplayedMedia.forEach((filename, index) => {
+                    const fileExtension = filename.split('.').pop().toLowerCase();
+                    const isVideo = videoExtensions.includes('.' + fileExtension);
+
+                    const base = imageLibraryBasePath.startsWith('/') ? imageLibraryBasePath : '/' + imageLibraryBasePath;
+                    const mediaPath = `${base.endsWith('/') ? base.slice(0, -1) : base}/${pathSegments.join('/')}/${filename}`;
+
+                    const galleryItem = document.createElement('div');
+                    galleryItem.classList.add('gallery-item', 'relative');
+                    galleryItem.dataset.index = index; // Store index for lightbox
+
+                    let mediaElement;
+                    if (isVideo) {
+                        mediaElement = document.createElement('video');
+                        mediaElement.src = mediaPath;
+                        mediaElement.preload = "metadata"; // Load enough to show a poster frame
+                        const videoOverlay = document.createElement('div');
+                        videoOverlay.classList.add('video-thumbnail-overlay');
+                        galleryItem.appendChild(videoOverlay);
+                    } else {
+                        mediaElement = document.createElement('img');
+                        mediaElement.src = mediaPath;
+                    }
+
+                    mediaElement.alt = `Media from ${pathSegments.join('/')}`;
+                    mediaElement.title = filename; // Show filename on hover
+
+                    mediaElement.onerror = function() {
+                        this.onerror=null; // Prevent infinite loop
+                        this.src = `https://placehold.co/300x250/cccccc/333333?text=File+Not+Found`; /* Updated placeholder height */
+                        this.alt = `File not found: ${filename}`;
+                    };
+
+                    galleryItem.onclick = () => openLightbox(index);
+
+                    const filenameOverlay = document.createElement('div');
+                    filenameOverlay.classList.add('absolute', 'bottom-0', 'left-0', 'right-0', 'bg-black', 'bg-opacity-50', 'text-white', 'text-sm', 'p-2', 'truncate', 'rounded-b-lg');
+                    filenameOverlay.textContent = filename;
+
+                    galleryItem.appendChild(mediaElement);
+                    galleryItem.appendChild(filenameOverlay);
+                    galleryContainer.appendChild(galleryItem);
+                });
+            } else {
+                galleryContainer.innerHTML = '<p class="text-center text-gray-600 col-span-full">No media found in this folder.</p>';
+                gallerySection.classList.add('hidden'); // Hide gallery section if no files
+            }
+        }
+
+
+        // 1. Load Years
+        async function loadYears() {
+            // Hide other sections
+            monthsSection.classList.add('hidden');
+            daysSection.classList.add('hidden');
+            gallerySection.classList.add('hidden'); // Hide gallery initially for years view
+            yearsSection.classList.remove('hidden');
+
+            yearsContainer.innerHTML = ''; // Clear previous content
+            showLoading(yearsContainer);
+            try {
+                console.log('Fetching years from /api/years...');
+                const response = await fetch('/api/years');
+                console.log(`Response status for years: ${response.status}`);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
+                }
+                const years = await response.json();
+                console.log('Years received:', years);
+
+                yearsContainer.innerHTML = ''; // Clear loading message
+                if (years.length > 0) {
+                    years.sort((a, b) => parseInt(b) - parseInt(a)).forEach(year => {
+                        const link = document.createElement('a');
+                        link.href = "#";
+                        link.textContent = year;
+                        link.classList.add('nav-link');
+                        link.onclick = (e) => {
+                            e.preventDefault();
+                            currentPath = [year];
+                            loadMonths(year);
+                            updateBreadcrumb();
+                        };
+                        yearsContainer.appendChild(link);
+                    });
+                } else {
+                    yearsContainer.innerHTML = '<p class="text-center text-gray-600 col-span-full">No years found.</p>';
+                }
+            } catch (error) {
+                console.error('Error fetching years:', error);
+                yearsContainer.innerHTML = '<p class="text-center text-red-600 col-span-full">Error loading years. Is the server running?</p>';
+            }
+        }
+
+        // 2. Load Months for a given Year AND files within that year folder
+        async function loadMonths(year) {
+            // Hide other sections
+            yearsSection.classList.add('hidden');
+            daysSection.classList.add('hidden');
+            monthsSection.classList.remove('hidden');
+            
+            showLoading(monthsContainer);
+            currentYearSpan.textContent = year;
+
+            try {
+                console.log(`Fetching months and files for: /api/months/${year}`);
+                const response = await fetch(`/api/months/${year}`);
+                console.log(`Response status for months and files: ${response.status}`);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
+                }
+                const data = await response.json(); // Server now returns { "months": [...], "files": [...] }
+                console.log('Months and files received:', data);
+
+                const months = data.months;
+                const files = data.files;
+
+                monthsContainer.innerHTML = ''; // Clear loading message
+                if (months.length > 0) {
+                    months.sort((a, b) => parseInt(a) - parseInt(b)).forEach(month => {
+                        const link = document.createElement('a');
+                        link.href = "#";
+                        link.textContent = month;
+                        link.classList.add('nav-link');
+                        link.onclick = (e) => {
+                            e.preventDefault();
+                            currentPath = [year, month];
+                            loadDays(year, month);
+                            updateBreadcrumb();
+                        };
+                        monthsContainer.appendChild(link);
+                    });
+                } else {
+                    monthsContainer.innerHTML = `<p class="text-center text-gray-600 col-span-full">No months found for ${year}.</p>`;
+                }
+
+                // Display files found directly in the year folder, and show/hide gallery section accordingly
+                if (files.length > 0) {
+                    currentMediaFolderSpan.textContent = year; // Update gallery title only if files exist
+                    displayMediaThumbnails(files, [year]);
+                } else {
+                    gallerySection.classList.add('hidden'); // Hide gallery section if no files
+                    galleryContainer.innerHTML = ''; // Clear any previous content
+                }
+
+            } catch (error) {
+                console.error('Error fetching months and files:', error);
+                monthsContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading months for ${year}.</p>`;
+                gallerySection.classList.add('hidden'); // Hide gallery section on error
+                galleryContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading media for ${year}.</p>`;
+            }
+        }
+
+        // 3. Load Days for a given Year and Month AND files within that month folder
+        async function loadDays(year, month) {
+            // Hide other sections
+            yearsSection.classList.add('hidden');
+            monthsSection.classList.add('hidden');
+            daysSection.classList.remove('hidden');
+            
+            showLoading(daysContainer);
+            currentMonthYearSpan.textContent = `${month}/${year}`;
+
+            try {
+                console.log(`Fetching days and files for: /api/days/${year}/${month}`);
+                const response = await fetch(`/api/days/${year}/${month}`);
+                console.log(`Response status for days and files: ${response.status}`);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
+                }
+                const data = await response.json(); // Server now returns { "days": [...], "files": [...] }
+                console.log('Days and files received:', data);
+
+                const days = data.days;
+                const files = data.files;
+
+                daysContainer.innerHTML = ''; // Clear loading message
+                if (days.length > 0) {
+                    days.sort((a, b) => parseInt(a) - parseInt(b)).forEach(day => {
+                        const link = document.createElement('a');
+                        link.href = "#";
+                        link.textContent = day;
+                        link.classList.add('nav-link');
+                        link.onclick = (e) => {
+                            e.preventDefault();
+                            currentPath = [year, month, day];
+                            loadPhotos(year, month, day);
+                            updateBreadcrumb();
+                        };
+                        daysContainer.appendChild(link);
+                    });
+                } else {
+                    daysContainer.innerHTML = `<p class="text-center text-gray-600 col-span-full">No days found for ${month}/${year}.</p>`;
+                }
+
+                // Display files found directly in the month folder, and show/hide gallery section accordingly
+                if (files.length > 0) {
+                    currentMediaFolderSpan.textContent = `${month}/${year}`; // Update gallery title only if files exist
+                    displayMediaThumbnails(files, [year, month]);
+                } else {
+                    gallerySection.classList.add('hidden'); // Hide gallery section if no files
+                    galleryContainer.innerHTML = ''; // Clear any previous content
+                }
+
+            } catch (error) {
+                console.error('Error fetching days and files:', error);
+                daysContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading days for ${month}/${year}.</p>`;
+                gallerySection.classList.add('hidden'); // Hide gallery section on error
+                galleryContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading media for ${month}/${year}.</p>`;
+            }
+        }
+
+        // 4. Load Photos/Videos for a given Year, Month, and Day
+        async function loadPhotos(year, month, day) {
+            // Hide other sections
+            yearsSection.classList.add('hidden');
+            monthsSection.classList.add('hidden');
+            daysSection.classList.add('hidden');
+            
+            showLoading(galleryContainer);
+            currentMediaFolderSpan.textContent = `${day}/${month}/${year}`; // Update gallery title
+
+            try {
+                console.log(`Fetching photos for: /api/photos/${year}/${month}/${day}`);
+                const response = await fetch(`/api/photos/${year}/${month}/${day}`);
+                console.log(`Response status for day photos: ${response.status}`);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
+                }
+                const files = await response.json(); // Server returns just a list of files for day folders
+                console.log('Files received for day folder:', files);
+
+                // Display files found directly in the day folder, and show/hide gallery section accordingly
+                if (files.length > 0) {
+                    gallerySection.classList.remove('hidden'); // Show gallery section if files exist
+                    displayMediaThumbnails(files, [year, month, day]);
+                } else {
+                    gallerySection.classList.add('hidden'); // Hide gallery section if no files
+                    galleryContainer.innerHTML = ''; // Clear any previous content
+                }
+
+            } catch (error) {
+                console.error('Error fetching photos for day folder:', error);
+                gallerySection.classList.add('hidden'); // Hide gallery section on error
+                galleryContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading media for ${day}/${month}/${year}.</p>`;
+            }
+        }
+
+        // --- Lightbox Functions ---
+
+        // Opens the lightbox with a specific image/video
+        function openLightbox(index) {
+            if (index >= 0 && index < currentDisplayedMedia.length) {
+                currentMediaIndex = index;
+                updateLightboxMedia();
+                lightboxOverlay.classList.add('active');
+                document.body.style.overflow = 'hidden'; // Prevent scrolling body when lightbox is open
+            }
+        }
+
+        // Updates the media displayed in the lightbox
+        function updateLightboxMedia() {
+            // Clear previous media
+            lightboxMediaDisplay.innerHTML = '';
+
+            const filename = currentDisplayedMedia[currentMediaIndex];
+            const base = imageLibraryBasePath.startsWith('/') ? imageLibraryBasePath : '/' + imageLibraryBasePath;
+            const mediaPath = `${base.endsWith('/') ? base.slice(0, -1) : base}/${currentMediaFolderSegments.join('/')}/${filename}`;
+
+            const fileExtension = filename.split('.').pop().toLowerCase();
+            const isVideo = videoExtensions.includes('.' + fileExtension);
+
+            let mediaElement;
+            if (isVideo) {
+                mediaElement = document.createElement('video');
+                mediaElement.controls = true; // Show video controls
+                mediaElement.autoplay = true; // Autoplay video in lightbox (may be restricted by browser)
+                mediaElement.preload = "auto"; // Preload video for better experience
+            } else {
+                mediaElement = document.createElement('img');
+                // Add click listener to close lightbox only for images
+                mediaElement.addEventListener('click', closeLightbox);
+            }
+
+            mediaElement.src = mediaPath;
+            mediaElement.alt = `Full size media: ${filename}`;
+            mediaElement.title = filename;
+            mediaElement.classList.add('media-display'); // Apply common styling
+
+            // Handle media loading errors for lightbox
+            mediaElement.onerror = function() {
+                this.onerror = null;
+                this.src = `https://placehold.co/800x600/cccccc/333333?text=File+Not+Found`;
+                this.alt = `File not found: ${filename}`;
+            };
+
+            lightboxMediaDisplay.appendChild(mediaElement);
+        }
+
+        // Closes the lightbox
+        function closeLightbox() {
+            lightboxOverlay.classList.remove('active');
+            document.body.style.overflow = ''; // Restore body scrolling
+            // Stop any playing video when closing lightbox
+            const videoInLightbox = lightboxMediaDisplay.querySelector('video');
+            if (videoInLightbox) {
+                videoInLightbox.pause();
+                videoInLightbox.currentTime = 0;
+            }
+        }
+
+        // Navigates to the next image/video in the lightbox
+        function showNextImage() {
+            currentMediaIndex = (currentMediaIndex + 1) % currentDisplayedMedia.length;
+            updateLightboxMedia();
+        }
+
+        // Navigates to the previous image/video in the lightbox
+        function showPreviousImage() {
+            currentMediaIndex = (currentMediaIndex - 1 + currentDisplayedMedia.length) % currentDisplayedMedia.length;
+            updateLightboxMedia();
+        }
+
+        // Event listeners for lightbox controls
+        lightboxClose.addEventListener('click', closeLightbox);
+        lightboxPrev.addEventListener('click', showPreviousImage);
+        lightboxNext.addEventListener('click', showNextImage);
+
+        // Close lightbox when clicking outside the media (on the overlay itself)
+        lightboxOverlay.addEventListener('click', (event) => {
+            // Only close if the click is directly on the overlay, not on the media or arrows
+            // This also prevents closing when clicking the image/video itself, as that's handled separately for images
+            if (event.target === lightboxOverlay || event.target === lightboxClose) {
+                closeLightbox();
+            }
+        });
+
+        // Keyboard navigation for lightbox (Escape to close, arrows for next/prev)
+        document.addEventListener('keydown', (event) => {
+            if (lightboxOverlay.classList.contains('active')) {
+                if (event.key === 'Escape') {
+                    closeLightbox();
+                } else if (event.key === 'ArrowRight') {
+                    showNextImage();
+                } else if (event.key === 'ArrowLeft') {
+                    showPreviousImage();
+                }
+            }
+        });
+
+        // Initial load: Start by showing years
+        window.onload = loadYears;
+    </script>
+</body>
+</html>
