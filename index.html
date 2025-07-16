@@ -96,7 +96,7 @@
             margin: 0 0.2rem; /* Space around the separator */
             color: #e2e8f0 !important; /* White and important */
             font-weight: normal; /* Ensure it's not bold */
-            font-size: 2rem; /* Made arrows 2x bigger */
+            font-size: 1rem; /* Made arrows 2x bigger */
         }
         /* Custom scrollbar for gallery */
         .gallery-grid {
@@ -538,7 +538,7 @@
         function updateBreadcrumb() {
             let pathHtml = '';
             currentPath.forEach((segment, index) => {
-                pathHtml += `<span class="breadcrumb-separator">&#8680;</span> <a href="#" data-path-index="${index}" class="nav-link">${segment}</a>`;
+                pathHtml += `<span class="breadcrumb-separator">&#11157;</span> <a href="#" data-path-index="${index}" class="nav-link">${segment}</a>`;
             });
             breadcrumbPath.innerHTML = pathHtml;
         }
@@ -615,7 +615,7 @@
 
                     mediaElement.onerror = function() {
                         this.onerror=null;
-                        this.src = `https://placehold.co/300x250/cccccc/333333?text=File+Not+Found`;
+                        this.src = `https://placehold.co/300x250/cccccc/333333?text=Unsupported+Format`;
                         this.alt = `File not found: ${filename}`;
                     };
 
@@ -891,7 +891,7 @@
 
             mediaElement.onerror = function() {
                 this.onerror = null;
-                this.src = `https://placehold.co/800x600/cccccc/333333?text=File+Not+Found`;
+                this.src = `https://placehold.co/800x600/cccccc/333333?text=Unsupported+Format`;
                 this.alt = `File not found: ${filename}`;
             };
 
