@@ -12,7 +12,7 @@ The gallery is served with Flask server (server.py). Server.py scans the folder 
 4. Start the Flask server ``python3 server.py``
 5. Navigate to http://127.0.0.1:5000
 
-
+##### Example: [http://143.47.246.212:8080/] #####
 -----
 Created with the help of Google Gemini 2.5 Flash.
 
