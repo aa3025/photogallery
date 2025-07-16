@@ -10,7 +10,7 @@ CORS(app) # Enable CORS for all routes, allowing your HTML to fetch data
 # Set this to the ABSOLUTE path of the directory that contains your YYYY (year) folders.
 # Example: If your images are in /Users/YourUser/Pictures/MyPhotos/2023/01/01
 # then image_library_root should be '/Users/YourUser/Pictures/MyPhotos'
-image_library_root = '/Volumes/aa3025_bkp/Photos_Backup' # <<<--- IMPORTANT: CHANGE THIS PATH!
+image_library_root = '/Volumes/My_Gallery' # <<<-------------------------------IMPORTANT: CHANGE THIS PATH!
 
 # Ensure the image_library_root exists
 if not os.path.isdir(image_library_root):
