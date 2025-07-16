@@ -23,7 +23,7 @@
         }
         .container {
             width: 100%; /* Make it take full available width */
-            min-height: auto; /* Set min-height to fill viewport, accounting for body padding */
+            min-height: calc(100vh - 2rem); /* Set min-height to fill viewport, accounting for body padding */
             margin: 0 auto; /* Center horizontally */
             padding: 1.5rem;
             background-color: #2d3748; /* Slightly lighter dark background for the container */
@@ -75,7 +75,7 @@
         }
         .gallery-item img, .gallery-item video {
             width: 100%;
-            height: 250px; /* Increased height for larger thumbnails */
+            height: 200px; /* Changed height to 200px */
             object-fit: cover; /* Ensures media covers the area without distortion */
             border-radius: 8px;
         }
@@ -100,24 +100,24 @@
         }
         /* Custom scrollbar for gallery */
         .gallery-grid {
-            overflow-y: auto; /* Keep auto overflow for scrolling when content exceeds available space */
-            padding-right: 15px; /* Space for scrollbar */
+            /* Removed overflow-y: scroll; and padding-right: 15px; */
             flex-grow: 1; /* Allow gallery grid to take available vertical space */
         }
-        .gallery-grid::-webkit-scrollbar {
+        /* Removed custom scrollbar styling for .gallery-grid as it will no longer have its own scrollbar */
+        /* .gallery-grid::-webkit-scrollbar {
             width: 8px;
         }
         .gallery-grid::-webkit-scrollbar-track {
-            background: #2d3748; /* Darker track */
+            background: #2d3748;
             border-radius: 10px;
         }
         .gallery-grid::-webkit-scrollbar-thumb {
-            background: #6a768f; /* Darker thumb */
+            background: #6a768f;
             border-radius: 10px;
         }
         .gallery-grid::-webkit-scrollbar-thumb:hover {
-            background: #8892b0; /* Lighter thumb on hover */
-        }
+            background: #8892b0;
+        } */
 
         /* Ensure sections can grow within the flex container */
         #yearsSection,
@@ -181,7 +181,7 @@
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            background-color: rgba(255, 255, 255, 0.2); /* Lighter background for arrows */
+            background-color: rgba(255, 255, 255, 0.1); /* Lighter background for arrows */
             color: white;
             padding: 1rem 0.8rem;
             cursor: pointer;
@@ -193,7 +193,7 @@
             z-index: 1010; /* Above the media */
         }
         .lightbox-nav-arrow:hover {
-            background-color: rgba(255, 255, 255, 0.4); /* Lighter on hover */
+            background-color: rgba(255, 255, 255, 0.2); /* Lighter on hover */
         }
         .lightbox-overlay:hover .lightbox-nav-arrow {
             opacity: 1; /* Show arrows on hover over the entire overlay */
@@ -267,52 +267,73 @@
             background-color: rgba(220, 38, 38, 1); /* Darker red on hover */
         }
 
-        /* Delete button styles for lightbox */
+        /* Lightbox Delete Button (now an icon) */
         .lightbox-delete-btn {
             position: absolute;
-            bottom: -50px; /* Adjusted to your specified value */
-            left: calc(50% - 20px); /* Position 20px left of center */
-            transform: translateX(-100%); /* Shift left by its full width */
-            background-color: rgba(220, 38, 38, 0.8); /* Slightly less opaque red */
+            top: 15px; /* Top right corner */
+            right: 65px; /* To the left of the close button */
+            transform: none; /* Remove previous transform */
+            background-color: rgba(220, 38, 38, 0.4); /* Semi-transparent red */
             color: white;
-            padding: 0.5rem 1rem; /* Smaller padding */
-            border-radius: 8px;
-            font-size: 0.9rem; /* Smaller font size */
+            width: 40px; /* Small square for icon */
+            height: 40px; /* Small square for icon */
+            border-radius: 50%; /* Make it round */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem; /* For the icon size */
             cursor: pointer;
             z-index: 1010;
-            opacity: 0; /* Hidden by default */
+            opacity: 0.7; /* Initial semi-transparency */
             transition: opacity 0.2s ease, background-color 0.2s ease;
+            padding: 0; /* Remove padding */
+            border: none; /* Remove border */
         }
         .lightbox-overlay:hover .lightbox-delete-btn {
             opacity: 1; /* Show on hover over the entire overlay */
         }
         .lightbox-delete-btn:hover {
-            background-color: rgba(220, 38, 38, 1); /* Darker red on hover */
+            background-color: rgba(220, 38, 38, 0.8); /* Darker red on hover */
             opacity: 1;
+        }
+        /* Style for the SVG icon inside the button */
+        .lightbox-delete-btn svg {
+            width: 60%; /* Make SVG fill button */
+            height: 60%;
         }
 
         /* New style for Restore button in lightbox */
         .lightbox-restore-btn {
             position: absolute;
-            bottom: -50px; /* Same bottom position as delete */
-            left: calc(50% + 20px); /* Position 20px right of center */
-            transform: translateX(0%); /* No extra shift, its left edge starts at 50% + 20px */
-            background-color: rgba(52, 211, 153, 0.8); /* Greenish color */
+            top: 15px; /* Align with delete button */
+            right: 115px; /* To the left of the delete button (65px + 40px width + 10px gap) */
+            transform: none; /* Remove previous transform */
+            background-color: rgba(52, 211, 153, 0.4); /* Greenish color, semi-transparent */
             color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            font-size: 0.9rem;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem; /* For the icon size */
             cursor: pointer;
             z-index: 1010;
-            opacity: 0;
+            opacity: 0.7;
             transition: opacity 0.2s ease, background-color 0.2s ease;
+            padding: 0;
+            border: none;
         }
         .lightbox-overlay:hover .lightbox-restore-btn {
             opacity: 1;
         }
         .lightbox-restore-btn:hover {
-            background-color: rgba(16, 185, 129, 1); /* Darker green on hover */
+            background-color: rgba(16, 185, 129, 0.8); /* Darker green on hover */
             opacity: 1;
+        }
+        /* Style for the UTF-8 icon inside the restore button */
+        .lightbox-restore-btn {
+            font-size: 1.8rem; /* Adjust font size for the UTF-8 symbol */
         }
 
 
@@ -393,7 +414,7 @@
 </head>
 <body>
     <div class="container">
-        <h1 class="text-4xl font-extrabold text-center text-indigo-700 mb-8">Image/Video Gallery Browser</h1>
+        <h1 class="text-4xl font-extrabold text-center text-gray-300 mb-8">Image/Video Gallery Browser</h1>
 
         <div class="breadcrumb mb-6 text-center">
             <a href="#" id="homeLink" class="nav-link">Home</a>
@@ -435,14 +456,22 @@
     <div id="lightboxOverlay" class="lightbox-overlay">
         <span id="lightboxClose" class="lightbox-close">&times;</span>
         <div class="lightbox-content">
-            <span id="lightboxPrev" class="lightbox-nav-arrow left">&lt;</span>
+            <span id="lightboxPrev" class="lightbox-nav-arrow left">&#11013;</span>
             <div id="lightboxMediaDisplay" class="media-display">
                 <!-- Image or Video will be loaded here -->
             </div>
-            <span id="lightboxNext" class="lightbox-nav-arrow right">&gt;</span>
+            <span id="lightboxNext" class="lightbox-nav-arrow right">&#11157;</span>
             <!-- Delete/Restore buttons will be dynamically added/removed here -->
-            <button id="lightboxDeleteBtn" class="lightbox-delete-btn">Move to Trash</button>
-            <button id="lightboxRestoreBtn" class="lightbox-restore-btn hidden">Restore File</button>
+            <button id="lightboxDeleteBtn" class="lightbox-delete-btn">
+                <!-- SVG for Trash/Delete icon -->
+                <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zm2.46-7.12l1.41-1.41L12 12.59l2.12-2.12 1.41 1.41L13.41 14l2.12 2.12-1.41 1.41L12 15.41l-2.12 2.12-1.41-1.41L10.59 14l-2.13-2.12zM15.5 4l-1-1h-5l-1 1H5v2h14V4z"/>
+                </svg>
+            </button>
+            <button id="lightboxRestoreBtn" class="lightbox-restore-btn hidden">
+                <!-- UTF-8 for Recycle icon -->
+                &#9851;
+            </button>
         </div>
     </div>
 
@@ -498,7 +527,6 @@
 
         // Confirmation Modal elements
         const confirmationModalOverlay = document.getElementById('confirmationModalOverlay');
-        // Corrected IDs here:
         const confirmActionBtn = document.getElementById('confirmActionBtn');
         const cancelActionBtn = document.getElementById('cancelActionBtn');
         const confirmationMessage = document.getElementById('confirmationMessage');
@@ -587,7 +615,7 @@
 
                     mediaElement.onerror = function() {
                         this.onerror=null;
-                        this.src = `https://placehold.co/300x250/cccccc/333333?text=Unsupported+Format`;
+                        this.src = `https://placehold.co/300x250/cccccc/333333?text=File+Not+Found`;
                         this.alt = `File not found: ${filename}`;
                     };
 
@@ -863,21 +891,22 @@
 
             mediaElement.onerror = function() {
                 this.onerror = null;
-                this.src = `https://placehold.co/800x600/cccccc/333333?text=Unsupported+Format`;
+                this.src = `https://placehold.co/800x600/cccccc/333333?text=File+Not+Found`;
                 this.alt = `File not found: ${filename}`;
             };
 
             lightboxMediaDisplay.appendChild(mediaElement);
 
-            // Conditional button visibility and text for lightbox delete/restore buttons
+            // Conditional button visibility and tooltips for lightbox delete/restore buttons
             const isViewingTrash = currentMediaFolderSegments.includes(TRASH_FOLDER_NAME);
             if (isViewingTrash) {
                 lightboxDeleteBtn.classList.remove('hidden');
-                lightboxDeleteBtn.textContent = 'Delete File Forever';
+                lightboxDeleteBtn.title = 'Delete Permanently'; // Tooltip for delete in trash
                 lightboxRestoreBtn.classList.remove('hidden');
+                lightboxRestoreBtn.title = 'Restore file'; // Tooltip for restore
             } else {
                 lightboxDeleteBtn.classList.remove('hidden');
-                lightboxDeleteBtn.textContent = 'Move to Trash';
+                lightboxDeleteBtn.title = 'Move to Recycle Bin'; // Tooltip for move to trash
                 lightboxRestoreBtn.classList.add('hidden');
             }
         }
