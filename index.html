@@ -1204,7 +1204,8 @@
 
             const isViewingTrash = currentPath.includes(TRASH_FOLDER_NAME);
             const fileExtension = mediaItem.filename.split('.').pop().toLowerCase();
-            const isRaw = RAW_EXTENSIONS.includes('.' + fileExtension);
+            // Modified to include HEIC in the isRaw check for download button visibility
+            const isRaw = RAW_EXTENSIONS.includes('.' + fileExtension) || fileExtension === 'heic'; 
 
             let mediaUrlForLightbox; 
             let filename = mediaItem.filename;
@@ -1273,7 +1274,7 @@
             lightboxMediaDisplay.appendChild(mediaElement);
 
             // Control visibility of the download RAW button
-            if (isRaw && !isViewingTrash) {
+            if (isRaw && !isViewingTrash) { // Now includes HEIC files for download
                 downloadRawBtn.classList.remove('hidden');
             } else {
                 downloadRawBtn.classList.add('hidden');

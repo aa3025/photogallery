@@ -60,6 +60,9 @@ RAW_EXTENSIONS = ('.nef', '.nrw', '.cr2', '.cr3', '.crw', '.arw', '.srf', '.sr2'
 VIDEO_EXTENSIONS = ('.mp4', '.mov', '.webm', '.ogg', '.avi', '.mkv')
 MEDIA_EXTENSIONS = IMAGE_EXTENSIONS + RAW_EXTENSIONS + VIDEO_EXTENSIONS
 
+# NEW: Define extensions for files that can be downloaded as original (RAWs and HEICs)
+DOWNLOADABLE_ORIGINAL_EXTENSIONS = RAW_EXTENSIONS + ('.heic',)
+
 
 # Helper function to get directories and files in a given path
 def get_contents_structured(path):
@@ -240,7 +243,7 @@ def _generate_thumbnail(original_file_path):
                 rgb = raw.postprocess(use_camera_wb=True, no_auto_bright=True, output_bps=8)
                 image = Image.fromarray(rgb)
         else:
-            # Use Pillow for standard image formats
+            # Use Pillow for standard image formats, including HEIC
             image = Image.open(original_file_path)
 
         # Apply EXIF orientation
@@ -284,7 +287,7 @@ def _ensure_preview_dir_exists(original_file_path):
 # NEW: Helper function to generate and save a full-size preview (for lightbox)
 def _generate_preview(original_file_path):
     """
-    Generates a full-size preview for an image or RAW file and saves it.
+    Generates a full-size preview for an image (including HEIC) or RAW file and saves it.
     Returns the path to the generated preview.
     """
     # Determine the preview file path
@@ -307,9 +310,15 @@ def _generate_preview(original_file_path):
                 # Postprocess to get a high-quality RGB image
                 rgb = raw.postprocess(use_camera_wb=True, no_auto_bright=True, output_bps=8, gamma=(2.222, 4.5))
                 image = Image.fromarray(rgb)
-        else:
-            # Use Pillow for standard image formats
+        elif file_extension in IMAGE_EXTENSIONS: # Also include HEIC and other standard images for preview generation
+            # Use Pillow for standard image formats, including HEIC
             image = Image.open(original_file_path)
+        else:
+            # If it's not a RAW or a supported image format, we don't generate a preview here.
+            # This case should ideally be handled by the caller (serve_media_for_lightbox)
+            # which would then serve the original file directly if it's a video.
+            print(f"Skipping preview generation for unsupported format: {original_file_path}")
+            return None # Indicate that a preview was not generated
 
         # Apply EXIF orientation
         try:
@@ -472,7 +481,7 @@ def list_trash_content():
                             metadata = json.load(meta_f)
                             original_path_from_meta = metadata.get("original_relative_path")
                     except json.JSONDecodeError:
-                        print(f"Warning: Could not decode metadata for {f}")
+                        print(f"Warning: Could not decode {COUNT_META_FILENAME} for {f}")
                 
                 trashed_items.append({
                     "filename": f,
@@ -693,12 +702,12 @@ def serve_thumbnail(filename):
         # If thumbnail generation failed or path is invalid, return 404
         abort(404)
 
-# NEW: API endpoint to serve full-size media for lightbox (handling RAW conversions)
+# NEW: API endpoint to serve full-size media for lightbox (handling RAW and HEIC conversions)
 @app.route('/api/media/<path:filename>')
 def serve_media_for_lightbox(filename):
     """
     Serves full-size media for the lightbox.
-    Generates JPG/WebP previews for RAW files on demand.
+    Generates WebP previews for RAW and HEIC files on demand.
     'filename' is the relative path of the original file from image_library_root.
     """
     original_file_path = os.path.abspath(os.path.join(image_library_root, filename))
@@ -712,8 +721,8 @@ def serve_media_for_lightbox(filename):
 
     file_extension = os.path.splitext(original_file_path)[1].lower()
 
-    if file_extension in RAW_EXTENSIONS:
-        # For RAW files, generate/retrieve a full-size preview
+    # If it's a RAW image OR a HEIC image, generate a WebP preview
+    if file_extension in RAW_EXTENSIONS or file_extension == '.heic':
         preview_path = _generate_preview(original_file_path)
         if preview_path and os.path.exists(preview_path):
             # Serve the generated preview
@@ -731,8 +740,8 @@ def serve_media_for_lightbox(filename):
 @app.route('/api/download_original_raw/<path:filename>')
 def download_original_raw(filename):
     """
-    Serves the original RAW file for download.
-    'filename' is the relative path of the original RAW file from image_library_root.
+    Serves the original RAW or HEIC file for download.
+    'filename' is the relative path of the original file from image_library_root.
     """
     original_file_path = os.path.abspath(os.path.join(image_library_root, filename))
 
@@ -744,10 +753,11 @@ def download_original_raw(filename):
         abort(404) # Not found
 
     file_extension = os.path.splitext(original_file_path)[1].lower()
-    if file_extension not in RAW_EXTENSIONS:
-        return jsonify({"error": "File is not a RAW image and cannot be downloaded via this endpoint."}), 400
+    # Updated to allow both RAW and HEIC extensions for download
+    if file_extension not in DOWNLOADABLE_ORIGINAL_EXTENSIONS:
+        return jsonify({"error": "File is not a supported original image format (RAW or HEIC) for download via this endpoint."}), 400
 
-    # Serve the original RAW file for download
+    # Serve the original RAW or HEIC file for download
     # as_attachment=True will force download instead of display in browser
     # download_name can be specified to ensure the original filename is used
     return send_from_directory(os.path.dirname(original_file_path), os.path.basename(original_file_path), as_attachment=True, download_name=os.path.basename(original_file_path))
@@ -785,4 +795,3 @@ if __name__ == '__main__':
     _initial_scan_and_populate_counts()
     # You can change the port if 5000 is in use
     app.run(host='0.0.0.0', debug=True, port=8080)
-
