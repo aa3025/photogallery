@@ -24,7 +24,7 @@
             padding: 1rem; /* Add padding to body, which will be the margin for the container */
         }
         .container {
-            min-width: 98%; /* Make it take full available width */
+            min-width: calc(100vw - 3rem); /* Make it take full available width minus 20px */
             min-height: auto;/*calc(100vh - 2rem); /* Set min-height to fill viewport, accounting for body padding */
             margin: 0 auto; /* Center horizontally */
             padding: 1.5rem;
@@ -34,6 +34,7 @@
             flex-grow: 1; /* Allow container to grow and fill available space within body */
             display: flex; /* Use flexbox for internal layout */
             flex-direction: column; /* Stack internal content vertically */
+            position: relative; /* Added to make absolute positioning of children relative to it */
         }
         /* Specific max-width for very large screens */
         @media (min-width: 1536px) {
@@ -508,8 +509,8 @@
         /* Positioning for action buttons in the breadcrumb area */
         #breadcrumbActionButtonsContainer {
             position: absolute; /* Changed to absolute positioning */
-            top: -50px; /* Adjusted to be near the top right of the breadcrumb */
-            right: -20px; /* Adjusted to be near the top right of the breadcrumb */
+            top: 13px; /* Adjusted to be near the top right of the container */
+            right: 10px; /* Adjusted to be near the top right of the container */
             display: flex;
             flex-direction: row; /* Arrange buttons horizontally */
             gap: 10px; /* Space between buttons */
@@ -521,19 +522,19 @@
 <body>
     <div class="container">
         <h1 class="text-4xl font-extrabold text-center text-gray-300 mb-8">Image/Video Gallery Browser</h1>
+        <!-- Action buttons container for breadcrumb area -->
+        <div id="breadcrumbActionButtonsContainer">
+            <!-- Slideshow button for breadcrumb area -->
+            <button id="slideshowBtnBreadcrumb" class="circular-action-btn slideshow-btn-style hidden" title="Start/Pause Slideshow">
+                <i class="material-icons play_icon">play_circle_outline</i>
+                <i class="material-icons pause_icon hidden">pause_circle_outline</i>
+            </button>
+        </div>
 
         <div class="breadcrumb mb-6 text-center">
             <div class="breadcrumb-path-container">
                 <a href="#" id="homeLink" class="nav-link">Home</a>
                 <span id="breadcrumbPath"></span>
-            </div>
-            <!-- Action buttons container for breadcrumb area -->
-            <div id="breadcrumbActionButtonsContainer">
-                <!-- Slideshow button for breadcrumb area -->
-                <button id="slideshowBtnBreadcrumb" class="circular-action-btn slideshow-btn-style hidden" title="Start/Pause Slideshow">
-                    <i class="material-icons play_icon">play_circle_outline</i>
-                    <i class="material-icons pause_icon hidden">pause_circle_outline</i>
-                </button>
             </div>
         </div>
 
