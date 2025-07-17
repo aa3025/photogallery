@@ -535,13 +535,13 @@
         }
         .loading-spinner .material-icons {
             font-size: 4rem; /* Large icon */
-            color: #4f46e5; /* Blue color */
+            color: #333333; /* Blue color */
             animation: spin 1.5s linear infinite; /* Spin animation */
         }
         .loading-spinner p {
             margin-top: 1rem;
             font-size: 1.2rem;
-            color: #cbd5e0;
+            color: #333333;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -558,7 +558,7 @@
             position: relative; /* Needed for spinner positioning */
             /* Reverted to 90vw and 90vh as per user request */
             max-width: 90vw;
-            max-height: 90vh;
+            max-height: 90vh;            
         }
     </style>
 </head>
@@ -1212,7 +1212,7 @@
             lightboxMediaDisplay.innerHTML = `
                 <div class="loading-spinner">
                     <i class="material-icons">autorenew</i>
-                    <p>Converting for preview...</p>
+                    <p style="color:#333333;">Converting for preview...</p>
                 </div>
             `;
         }
