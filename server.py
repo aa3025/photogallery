@@ -16,7 +16,7 @@ CORS(app) # Enable CORS for all routes, allowing your HTML to fetch data
 # IMPORTANT: This should be the absolute path to your media folder.
 # For example: '/Users/youruser/Pictures/MyPhotoLibrary' or 'C:\\Users\\youruser\\Pictures\\MyPhotoLibrary'
 # Ensure this path is correct for your environment.
-image_library_root = os.path.abspath('/Volumes/aa3025_bkp/Photos_Backup') # Hardcoded path as requested
+image_library_root = os.path.abspath('/path/to/my/gallery/') # Hardcoded path as requested
 
 # Define the trash folder name and its absolute path
 TRASH_FOLDER_NAME = '_Trash'
