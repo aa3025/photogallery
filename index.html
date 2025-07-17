@@ -112,6 +112,7 @@
             align-items: center; /* Align items vertically */
             justify-content: space-between; /* Space between path and buttons */
             gap: 1rem; /* Gap between breadcrumb path and buttons */
+            position: relative; /* Added for absolute positioning of its child */
         }
         .breadcrumb-path-container {
             display: flex;
@@ -179,7 +180,7 @@
             visibility: visible;
         }
         .lightbox-content {
-            position: relative;
+            position: relative; /* Changed to relative for positioning inner elements */
             max-width: 90vw;
             max-height: 90vh;
             display: flex;
@@ -189,20 +190,20 @@
             width: 100%;
             height: 100%;
         }
-        .lightbox-content .media-display {
+        /* The media-display class is now only applied to the actual img/video element */
+        .media-display { /* Removed .lightbox-content prefix */
             max-width: 100%;
             max-height: 100%;
             object-fit: contain; /* Ensure media fits within the box */
             border-radius: 8px;
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7); /* Stronger shadow for lightbox media */
-            /* Added for larger video display */
             width: auto; /* Allow intrinsic width */
             height: auto; /* Allow intrinsic height */
             max-width: 90vw; /* Constrain by viewport width */
             max-height: 90vh; /* Constrain by viewport height */
         }
         /* Specific rule for video elements within media-display to ensure they fill space */
-        .lightbox-content .media-display video {
+        .media-display video { /* Removed .lightbox-content prefix */
             width: 100%;
             height: 100%;
             object-fit: contain; /* Maintain aspect ratio */
@@ -234,21 +235,30 @@
         .lightbox-nav-arrow.right {
             right: 10px;
         }
-        /* Lightbox Close Button (positioned absolutely within lightbox-overlay) */
-        .lightbox-close {
-            position: absolute;
-            top: 15px;
-            right: 25px;
-            color: white;
-            font-size: 2.5rem;
+        /* Lightbox Close Button (now part of the action buttons container) */
+        .lightbox-close-btn { /* New class for the close button when part of the stack */
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             cursor: pointer;
             z-index: 1010;
             opacity: 0.7;
-            transition: opacity 0.2s ease;
+            transition: opacity 0.2s ease, background-color 0.2s ease;
+            padding: 0;
+            border: none;
+            color: #e2e8f0; /* Light text color for icons */
+            background-color: rgba(255, 255, 255, 0.1); /* Light background for close button */
+            font-size: 2.5rem; /* Match original size */
+            font-weight: normal; /* Ensure it's not bold */
         }
-        .lightbox-close:hover {
+        .lightbox-close-btn:hover {
             opacity: 1;
+            background-color: rgba(255, 255, 255, 0.2);
         }
+
 
         /* Play icon for video thumbnails */
         .video-thumbnail-overlay {
@@ -321,27 +331,27 @@
             background-color: rgba(79, 70, 229, 0.8); /* Darker blue on hover */
         }
 
-        /* Specific styles for trash and restore buttons in breadcrumb */
-        #trashDeleteBtn {
+        /* Specific styles for trash and restore buttons */
+        .trash-delete-btn-style {
             background-color: rgba(220, 38, 38, 0.4); /* Red background */
         }
-        #trashDeleteBtn:hover {
+        .trash-delete-btn-style:hover {
             background-color: rgba(220, 38, 38, 0.8); /* Darker red on hover */
         }
-        #trashRestoreBtn {
+        .trash-restore-btn-style {
             background-color: rgba(52, 211, 153, 0.4); /* Green background */
         }
-        #trashRestoreBtn:hover {
+        .trash-restore-btn-style:hover {
             background-color: rgba(16, 185, 129, 0.8); /* Darker green on hover */
         }
 
         /* Icon sizing for delete/restore */
-        #trashDeleteBtn .material-icons,
-        #trashRestoreBtn .material-icons {
+        .trash-delete-btn-style .material-icons,
+        .trash-restore-btn-style .material-icons {
             font-size: 1.5rem; /* Adjusted to match Material Icons visual size */
         }
         /* Material Icons for Play/Pause buttons */
-        .circular-action-btn .material-icons {
+        .slideshow-btn-style .material-icons {
             font-size: 2.5rem; /* Larger font size for play/pause icons */
         }
 
@@ -483,6 +493,29 @@
         .thumbnail-fade-in.loaded {
             opacity: 1;
         }
+
+        /* Positioning for action buttons within the lightbox overlay */
+        #lightboxActionButtonsContainer {
+            position: absolute;
+            top: 15px; /* Aligned with the top of the lightbox */
+            right: 25px; /* Aligned with the right of the lightbox */
+            display: flex;
+            flex-direction: column; /* Stack buttons vertically */
+            gap: 10px; /* Space between buttons */
+            z-index: 1010; /* Ensure they are on top */
+            align-items: flex-end; /* Align items to the right within the column */
+        }
+        /* Positioning for action buttons in the breadcrumb area */
+        #breadcrumbActionButtonsContainer {
+            position: absolute; /* Changed to absolute positioning */
+            top: -50px; /* Adjusted to be near the top right of the breadcrumb */
+            right: -20px; /* Adjusted to be near the top right of the breadcrumb */
+            display: flex;
+            flex-direction: row; /* Arrange buttons horizontally */
+            gap: 10px; /* Space between buttons */
+            align-items: center; /* Vertically align items */
+            z-index: 500; /* Ensure it's above other breadcrumb content if needed */
+        }
     </style>
 </head>
 <body>
@@ -494,21 +527,12 @@
                 <a href="#" id="homeLink" class="nav-link">Home</a>
                 <span id="breadcrumbPath"></span>
             </div>
-            <!-- Action buttons container -->
-            <div id="actionButtonsContainer" class="flex flex-col items-end gap-2 ml-auto">
-                <!-- Slideshow button -->
-                <button id="slideshowBtn" class="circular-action-btn hidden" title="Start/Pause Slideshow">
+            <!-- Action buttons container for breadcrumb area -->
+            <div id="breadcrumbActionButtonsContainer">
+                <!-- Slideshow button for breadcrumb area -->
+                <button id="slideshowBtnBreadcrumb" class="circular-action-btn slideshow-btn-style hidden" title="Start/Pause Slideshow">
                     <i class="material-icons play_icon">play_circle_outline</i>
                     <i class="material-icons pause_icon hidden">pause_circle_outline</i>
-                </button>
-
-                <!-- Delete button -->
-                <button id="trashDeleteBtn" class="circular-action-btn hidden" title="Move to Trash">
-                    <i class="material-icons">delete</i>
-                </button>
-                <!-- Restore button -->
-                <button id="trashRestoreBtn" class="circular-action-btn hidden" title="Restore File">
-                    <i class="material-icons">restore_from_trash</i>
                 </button>
             </div>
         </div>
@@ -546,15 +570,32 @@
 
     <!-- Lightbox/Modal Structure -->
     <div id="lightboxOverlay" class="lightbox-overlay">
-        <span id="lightboxClose" class="lightbox-close">&times;</span>
-        <div class="lightbox-content">
-            <span id="lightboxFilename"></span> <!-- New element for filename -->
-            <span id="lightboxPrev" class="lightbox-nav-arrow left">&#11013;</span>
-            <div id="lightboxMediaDisplay" class="media-display">
-                <!-- Image or Video will be loaded here -->
-            </div>
-            <span id="lightboxNext" class="lightbox-nav-arrow right">&#11157;</span>
+        <!-- Action buttons container moved directly inside lightbox-overlay -->
+        <div id="lightboxActionButtonsContainer">
+            <!-- Close button for lightbox -->
+            <button id="lightboxClose" class="lightbox-close-btn" title="Close Lightbox"><i class="material-icons">cancel</i></button>
+            <!-- Slideshow button for lightbox -->
+            <button id="slideshowBtnLightbox" class="circular-action-btn slideshow-btn-style" title="Start/Pause Slideshow">
+                <i class="material-icons play_icon">play_circle_outline</i>
+                <i class="material-icons pause_icon hidden">pause_circle_outline</i>
+            </button>
+
+            <!-- Delete button for lightbox -->
+            <button id="trashDeleteBtn" class="circular-action-btn trash-delete-btn-style" title="Move to Trash">
+                <i class="material-icons">delete</i>
+            </button>
+            <!-- Restore button for lightbox -->
+            <button id="trashRestoreBtn" class="circular-action-btn trash-restore-btn-style hidden" title="Restore File">
+                <i class="material-icons">restore_from_trash</i>
+            </button>
         </div>
+
+        <span id="lightboxFilename"></span> <!-- New element for filename -->
+        <span id="lightboxPrev" class="lightbox-nav-arrow left">&#11013;</span>
+        <div id="lightboxMediaDisplay">
+            <!-- Image or Video will be loaded here -->
+        </div>
+        <span id="lightboxNext" class="lightbox-nav-arrow right">&#11157;</span>
     </div>
 
     <!-- Custom Confirmation Modal -->
@@ -582,13 +623,13 @@
         let isSlideshowRunning = false;
         const slideshowDelay = 3000; // Changed to 3 seconds
 
-        // Define video extensions for client-side check (matching server.py)
-        const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.avif',
-                                  '.nef', '.nrw', '.cr2', '.cr3', '.crw', '.arw', '.srf', '.sr2',
+        // Define image and video extensions for client-side check (matching server.py)
+        const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.avif'];
+        const RAW_EXTENSIONS = ['.nef', '.nrw', '.cr2', '.cr3', '.crw', '.arw', '.srf', '.sr2',
                                   '.orf', '.raf', '.rw2', '.raw', '.dng', '.kdc', '.dcr', '.erf',
                                   '.3fr', '.mef', '.pef', '.x3f'];
         const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.webm', '.ogg', '.avi', '.mkv'];
-        const MEDIA_EXTENSIONS = IMAGE_EXTENSIONS.concat(VIDEO_EXTENSIONS);
+        const MEDIA_EXTENSIONS = IMAGE_EXTENSIONS.concat(RAW_EXTENSIONS).concat(VIDEO_EXTENSIONS);
 
 
         const yearsContainer = document.getElementById('yearsContainer');
@@ -607,17 +648,18 @@
         const breadcrumbPath = document.getElementById('breadcrumbPath');
         const homeLink = document.getElementById('homeLink');
         
-        // Action buttons in the breadcrumb area
-        const slideshowBtn = document.getElementById('slideshowBtn'); 
-        const trashDeleteBtn = document.getElementById('trashDeleteBtn');
-        const trashRestoreBtn = document.getElementById('trashRestoreBtn');
+        // Action buttons (now distinct for breadcrumb and lightbox)
+        const slideshowBtnBreadcrumb = document.getElementById('slideshowBtnBreadcrumb'); 
+        const slideshowBtnLightbox = document.getElementById('slideshowBtnLightbox');
+        const trashDeleteBtn = document.getElementById('trashDeleteBtn'); // This is now the single delete button in lightbox
+        const trashRestoreBtn = document.getElementById('trashRestoreBtn'); // This is now the single restore button in lightbox
 
         // Lightbox elements
         const lightboxOverlay = document.getElementById('lightboxOverlay');
         const lightboxMediaDisplay = document.getElementById('lightboxMediaDisplay');
         const lightboxPrev = document.getElementById('lightboxPrev');
         const lightboxNext = document.getElementById('lightboxNext');
-        const lightboxClose = document.getElementById('lightboxClose');
+        const lightboxClose = document.getElementById('lightboxClose'); // Now a button inside the container
         const lightboxFilename = document.getElementById('lightboxFilename'); 
 
         // Confirmation Modal elements
@@ -665,33 +707,38 @@
             updateActionButtonsVisibility(); // Update visibility of action buttons
         }
 
-        // Function to control visibility of action buttons in the breadcrumb area
+        // Function to control visibility of action buttons
         function updateActionButtonsVisibility() {
             const isViewingTrash = currentPath.includes(TRASH_FOLDER_NAME);
             const isLightboxActive = lightboxOverlay.classList.contains('active');
-            const isViewingMediaFolder = currentPath.length >= 1; // Any path beyond home implies a media folder
+            const isViewingMediaFolder = currentPath.length >= 1 && !isViewingTrash; // Any path beyond home implies a media folder, and not trash
 
-            // Slideshow button visibility
-            // Only show if viewing a media folder (not trash)
-            if (isViewingMediaFolder && !isViewingTrash) {
-                slideshowBtn.classList.remove('hidden');
+            console.log(`[updateActionButtonsVisibility] isViewingTrash: ${isViewingTrash}, isLightboxActive: ${isLightboxActive}, isViewingMediaFolder: ${isViewingMediaFolder}`);
+
+            // Breadcrumb Slideshow button visibility
+            if (isViewingMediaFolder && !isLightboxActive) { // Only show if viewing a media folder (not trash) AND lightbox is not active
+                slideshowBtnBreadcrumb.classList.remove('hidden');
             } else {
-                slideshowBtn.classList.add('hidden');
+                slideshowBtnBreadcrumb.classList.add('hidden');
             }
-            updateSlideshowControls(); // Update slideshow icon based on state
 
-            // Trash/Delete button visibility
-            // Show if lightbox is active (regardless of whether it's trash or not)
+            // Lightbox Slideshow button visibility
+            if (isLightboxActive && isViewingMediaFolder) { // Only show if lightbox is active and it's a non-trash media folder
+                slideshowBtnLightbox.classList.remove('hidden');
+            } else {
+                slideshowBtnLightbox.classList.add('hidden');
+            }
+            updateSlideshowControls(); // Update slideshow icons based on state for both buttons
+
+            // Lightbox Trash/Delete button visibility
             if (isLightboxActive) {
                 trashDeleteBtn.classList.remove('hidden');
-                // Update tooltip based on whether it's trash or not
                 trashDeleteBtn.title = isViewingTrash ? 'Delete Permanently' : 'Move to Trash';
             } else {
                 trashDeleteBtn.classList.add('hidden');
             }
 
-            // Restore button visibility
-            // Only show if viewing trash AND lightbox is active
+            // Lightbox Restore button visibility
             if (isViewingTrash && isLightboxActive) {
                 trashRestoreBtn.classList.remove('hidden');
             } else {
@@ -764,7 +811,7 @@
                         fullRelativePathForOriginal = mediaItem.original_path; // This is the path to the full-res original
                         const fileExtension = filename.split('.').pop().toLowerCase();
                         // Use the /api/thumbnail endpoint for images, original path for videos
-                        if (IMAGE_EXTENSIONS.includes('.' + fileExtension)) {
+                        if (IMAGE_EXTENSIONS.includes('.' + fileExtension) || RAW_EXTENSIONS.includes('.' + fileExtension)) {
                             thumbnailMediaUrl = `/api/thumbnail/${fullRelativePathForOriginal}`;
                         } else { // For videos, use the original path as its own thumbnail
                             thumbnailMediaUrl = `/${fullRelativePathForOriginal}`;
@@ -844,7 +891,7 @@
                 galleryContainer.innerHTML = '<p class="text-center text-gray-600 col-span-full">No media found in this folder.</p>';
                 gallerySection.classList.add('hidden');
             }
-            updateActionButtonsVisibility();
+            updateActionButtonsVisibility(); // Call after rendering thumbnails to ensure correct button state
         }
 
         // 1. Load Years and Trash Button
@@ -884,7 +931,7 @@
                         link.appendChild(yearText);
 
                         if (yearItem.count !== undefined && yearItem.count !== null) {
-                            const countText = document.createElement('span');
+                            const countText = document.createElement('span'); // Corrected: Create a span element
                             countText.classList.add('item-count');
                             countText.textContent = `(${yearItem.count} items)`;
                             link.appendChild(countText);
@@ -921,7 +968,7 @@
                     if (trashResponse.ok) {
                         const trashData = await trashResponse.json();
                         if (trashData.count !== undefined && trashData.count !== null) {
-                            const trashCountText = document.createElement('span');
+                            const trashCountText = document.createElement('span'); // Corrected: Create a span element
                             trashCountText.classList.add('item-count');
                             trashCountText.textContent = `(${trashData.count} items)`;
                             trashLink.appendChild(trashCountText);
@@ -936,7 +983,7 @@
                 console.error('Error fetching years:', error);
                 yearsContainer.innerHTML = '<p class="text-center text-red-600 col-span-full">Error loading years. Is the server running?</p>';
             }
-            updateActionButtonsVisibility();
+            updateActionButtonsVisibility(); // Call after loading years to ensure correct button state
         }
 
         // 2. Load Months for a given Year AND files within that year folder
@@ -977,7 +1024,7 @@
                         link.appendChild(monthText);
 
                         if (monthItem.count !== undefined && monthItem.count !== null) {
-                            const countText = document.createElement('span');
+                            const countText = document.createElement('span'); // Corrected: Create a span element
                             countText.classList.add('item-count');
                             countText.textContent = `(${monthItem.count} items)`;
                             link.appendChild(countText);
@@ -1002,7 +1049,7 @@
                 gallerySection.classList.add('hidden');
                 galleryContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading media for ${year}.</p>`;
             }
-            updateActionButtonsVisibility();
+            updateActionButtonsVisibility(); // Call after loading months to ensure correct button state
         }
 
         // 3. Load Days for a given Year and Month AND files within that month folder
@@ -1043,7 +1090,7 @@
                         link.appendChild(dayText);
 
                         if (dayItem.count !== undefined && dayItem.count !== null) {
-                            const countText = document.createElement('span');
+                            const countText = document.createElement('span'); // Corrected: Create a span element
                             countText.classList.add('item-count');
                             countText.textContent = `(${dayItem.count} items)`;
                             link.appendChild(countText);
@@ -1068,7 +1115,7 @@
                 gallerySection.classList.add('hidden');
                 galleryContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading media for ${month}/${year}.</p>`;
             }
-            updateActionButtonsVisibility();
+            updateActionButtonsVisibility(); // Call after loading days to ensure correct button state
         }
 
         // 4. Load Photos/Videos for a given Year, Month, and Day
@@ -1102,7 +1149,7 @@
                 gallerySection.classList.add('hidden');
                 galleryContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading media for ${day}/${month}/${year}. Please check console for details.</p>`;
             }
-            updateActionButtonsVisibility();
+            updateActionButtonsVisibility(); // Call after loading photos to ensure correct button state
         }
 
         // --- Lightbox Functions ---
@@ -1124,6 +1171,8 @@
                 
                 updateSlideshowControls(); // Ensure slideshow icon is correct
                 updateActionButtonsVisibility(); // Update visibility of action buttons when lightbox opens
+            } else {
+                console.warn(`[openLightbox] Invalid index: ${index} or currentDisplayedMedia is empty.`);
             }
         }
 
@@ -1132,6 +1181,12 @@
             lightboxMediaDisplay.innerHTML = '';
 
             const mediaItem = currentDisplayedMedia[currentMediaIndex];
+            if (!mediaItem) {
+                console.error(`[updateLightboxMedia] mediaItem is undefined or null at index ${currentMediaIndex}. Cannot update lightbox.`);
+                return; // Exit if mediaItem is invalid
+            }
+            console.log(`[updateLightboxMedia] Current mediaItem:`, mediaItem);
+
             const isViewingTrash = currentPath.includes(TRASH_FOLDER_NAME);
 
             let mediaUrlForLightbox; // This will be the URL for the full-res media in lightbox
@@ -1151,6 +1206,9 @@
                 displayPath = mediaItem.original_path.replace(/\//g, ' -> '); // Use original_path for display
             }
             
+            console.log(`[updateLightboxMedia] fileToProcessPath: ${fileToProcessPath}`);
+            console.log(`[updateLightboxMedia] mediaUrlForLightbox: ${mediaUrlForLightbox}`);
+
             const fileExtension = filename.split('.').pop().toLowerCase();
             const isVideo = VIDEO_EXTENSIONS.includes('.' + fileExtension);
 
@@ -1164,9 +1222,10 @@
                 mediaElement.preload = "auto";
             } else {
                 mediaElement = document.createElement('img');
-                if (!isSlideshowRunning) {
-                    mediaElement.addEventListener('click', closeLightbox);
-                }
+                // Removed click listener from image for slideshow control
+                // if (!isSlideshowRunning) {
+                //     mediaElement.addEventListener('click', closeLightbox);
+                // }
             }
 
             mediaElement.src = mediaUrlForLightbox; // Set the full-res URL here
@@ -1206,12 +1265,14 @@
 
         // Navigates to the next image/video in the lightbox
         function showNextImage() {
+            if (currentDisplayedMedia.length === 0) return;
             currentMediaIndex = (currentMediaIndex + 1) % currentDisplayedMedia.length;
             updateLightboxMedia();
         }
 
         // Navigates to the previous image/video in the lightbox
         function showPreviousImage() {
+            if (currentDisplayedMedia.length === 0) return;
             currentMediaIndex = (currentMediaIndex - 1 + currentDisplayedMedia.length) % currentDisplayedMedia.length;
             updateLightboxMedia();
         }
@@ -1284,21 +1345,31 @@
             updateSlideshowControls(); 
         }
 
-        // Updates the icons and tooltips for the slideshow button (now only in lightbox overlay)
+        // Updates the icons and tooltips for the slideshow buttons
         function updateSlideshowControls() {
-            const playIcon = slideshowBtn.querySelector('.play_icon'); 
-            const pauseIcon = slideshowBtn.querySelector('.pause_icon'); 
+            const breadcrumbPlayIcon = slideshowBtnBreadcrumb.querySelector('.play_icon'); 
+            const breadcrumbPauseIcon = slideshowBtnBreadcrumb.querySelector('.pause_icon'); 
+            const lightboxPlayIcon = slideshowBtnLightbox.querySelector('.play_icon');
+            const lightboxPauseIcon = slideshowBtnLightbox.querySelector('.pause_icon');
             
             if (isSlideshowRunning) {
-                playIcon.classList.add('hidden');
-                pauseIcon.classList.remove('hidden');
-                slideshowBtn.title = 'Pause slideshow';
-            } else {
-                playIcon.classList.remove('hidden');
-                pauseIcon.classList.add('hidden');
-                slideshowBtn.title = 'Resume slideshow'; 
-            }
+                breadcrumbPlayIcon.classList.add('hidden');
+                breadcrumbPauseIcon.classList.remove('hidden');
+                slideshowBtnBreadcrumb.title = 'Pause slideshow';
 
+                lightboxPlayIcon.classList.add('hidden');
+                lightboxPauseIcon.classList.remove('hidden');
+                slideshowBtnLightbox.title = 'Pause slideshow';
+            } else {
+                breadcrumbPlayIcon.classList.remove('hidden');
+                breadcrumbPauseIcon.classList.add('hidden');
+                slideshowBtnBreadcrumb.title = 'Resume slideshow'; 
+
+                lightboxPlayIcon.classList.remove('hidden');
+                lightboxPauseIcon.classList.add('hidden');
+                slideshowBtnLightbox.title = 'Resume slideshow';
+            }
+            
             // Hide/show navigation arrows based on slideshow state (only affects lightbox arrows)
             if (lightboxOverlay.classList.contains('active')) {
                 if (isSlideshowRunning) {
@@ -1321,17 +1392,26 @@
         lightboxPrev.addEventListener('click', showPreviousImage);
         lightboxNext.addEventListener('click', showNextImage);
         
-        // Event listener for the slideshow button (now in breadcrumb)
-        slideshowBtn.addEventListener('click', toggleSlideshow); 
+        // Event listener for the slideshow button in the breadcrumb
+        slideshowBtnBreadcrumb.addEventListener('click', toggleSlideshow); 
 
-        // Event listeners for delete/restore buttons (now in breadcrumb)
+        // Event listener for the slideshow button in the lightbox
+        slideshowBtnLightbox.addEventListener('click', toggleSlideshow);
+
+        // Event listeners for delete/restore buttons (now in lightbox)
         trashDeleteBtn.addEventListener('click', () => {
             const isViewingTrash = currentPath.includes(TRASH_FOLDER_NAME);
-            showConfirmationModal(fileToProcessPath, isViewingTrash, false); 
+            // Ensure fileToProcessPath is set from the currently displayed media item in lightbox
+            const mediaItemInLightbox = currentDisplayedMedia[currentMediaIndex];
+            const pathForAction = isViewingTrash ? mediaItemInLightbox.relative_path_in_trash : mediaItemInLightbox.original_path;
+            showConfirmationModal(pathForAction, isViewingTrash, false); 
         });
 
         trashRestoreBtn.addEventListener('click', () => {
-            showConfirmationModal(fileToProcessPath, false, true); 
+            // Ensure fileToProcessPath is set from the currently displayed media item in lightbox
+            const mediaItemInLightbox = currentDisplayedMedia[currentMediaIndex];
+            const pathForAction = mediaItemInLightbox.relative_path_in_trash; // Always use relative_path_in_trash for restore
+            showConfirmationModal(pathForAction, false, true); 
         });
 
         // Add click listener to lightbox media display for pause/resume
@@ -1339,6 +1419,7 @@
             if (isSlideshowRunning) {
                 toggleSlideshow(); 
             } else {
+                // Only close lightbox on click if slideshow is NOT running
                 closeLightbox();
             }
         });
@@ -1545,7 +1626,7 @@
                 console.error('Error fetching trash content:', error);
                 galleryContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading trash content: ${error.message}.</p>`;
             }
-            updateActionButtonsVisibility();
+            updateActionButtonsVisibility(); // Call after loading trash content to ensure correct button state
         }
 
 
