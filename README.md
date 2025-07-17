@@ -1,5 +1,5 @@
 
-# Local Image/Video Gallery Browser
+# Local Photo/Video Gallery Browser
 
 This project provides a simple, self-hosted web application to browse your local image and video library, featuring dynamic thumbnail generation, a full-screen lightbox viewer, slideshow capabilities, and a trash management system.
 
