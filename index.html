@@ -24,7 +24,7 @@
             padding: 1rem; /* Add padding to body, which will be the margin for the container */
         }
         .container {
-            min-width: calc(100vw - 3rem); /* Make it take full available width minus 20px */
+            min-width: calc(100vw - 3rem); /* Updated to 100vw - 3rem as per your request */
             min-height: auto;/*calc(100vh - 2rem); /* Set min-height to fill viewport, accounting for body padding */
             margin: 0 auto; /* Center horizontally */
             padding: 1.5rem;
@@ -442,7 +442,7 @@
         /* Lightbox filename display */
         #lightboxFilename {
             position: absolute;
-            top: -40px; /* Moved up to be above the image */
+            top: 20px; /* Moved up to be above the image */
             left: 50%;
             transform: translateX(-50%);
             color: rgba(255, 255, 255, 0.8);
@@ -509,7 +509,7 @@
         /* Positioning for action buttons in the breadcrumb area */
         #breadcrumbActionButtonsContainer {
             position: absolute; /* Changed to absolute positioning */
-            top: 13px; /* Adjusted to be near the top right of the container */
+            top: 14px; /* Adjusted to be near the top right of the container */
             right: 10px; /* Adjusted to be near the top right of the container */
             display: flex;
             flex-direction: row; /* Arrange buttons horizontally */
@@ -801,15 +801,16 @@
             if (currentDisplayedMedia.length > 0) {
                 gallerySection.classList.remove('hidden');
                 currentDisplayedMedia.forEach((mediaItem, index) => {
-                    let fullRelativePathForOriginal; // This will be the path to the full-res original
-                    let thumbnailMediaUrl; // This will be the URL for the thumbnail
-                    let filename = mediaItem.filename; // Get filename from the object
+                    // mediaItem is now guaranteed to be an object with filename and original_path (or relative_path_in_trash)
+                    let fullRelativePathForOriginal; 
+                    let thumbnailMediaUrl; 
+                    let filename = mediaItem.filename; 
 
                     if (isViewingTrash) {
-                        fullRelativePathForOriginal = mediaItem.relative_path_in_trash; // In trash, the trashed file is the "original" for viewing
-                        thumbnailMediaUrl = `/${fullRelativePathForOriginal}`; // For trash, we serve the trashed file itself as the thumbnail for now
+                        fullRelativePathForOriginal = mediaItem.relative_path_in_trash; 
+                        thumbnailMediaUrl = `/${fullRelativePathForOriginal}`; 
                     } else {
-                        fullRelativePathForOriginal = mediaItem.original_path; // This is the path to the full-res original
+                        fullRelativePathForOriginal = mediaItem.original_path; 
                         const fileExtension = filename.split('.').pop().toLowerCase();
                         // Use the /api/thumbnail endpoint for images, original path for videos
                         if (IMAGE_EXTENSIONS.includes('.' + fileExtension) || RAW_EXTENSIONS.includes('.' + fileExtension)) {
@@ -819,8 +820,7 @@
                         }
                     }
                     
-                    // Defensive check for filename before using split()
-                    if (typeof filename === 'string' && filename) { // Ensure filename is a non-empty string
+                    if (typeof filename === 'string' && filename) { 
                         const fileExtension = filename.split('.').pop().toLowerCase();
                         const isVideo = VIDEO_EXTENSIONS.includes('.' + fileExtension);
 
@@ -831,18 +831,17 @@
                         let mediaElement;
                         if (isVideo) {
                             mediaElement = document.createElement('video');
-                            mediaElement.dataset.src = thumbnailMediaUrl; // Use data-src for lazy loading
+                            mediaElement.dataset.src = thumbnailMediaUrl; 
                             mediaElement.preload = "metadata";
                             const videoOverlay = document.createElement('div');
                             videoOverlay.classList.add('video-thumbnail-overlay');
                             galleryItem.appendChild(videoOverlay);
                         } else {
                             mediaElement = document.createElement('img');
-                            mediaElement.dataset.src = thumbnailMediaUrl; // Use data-src for lazy loading
-                            mediaElement.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='; // Tiny transparent GIF placeholder
+                            mediaElement.dataset.src = thumbnailMediaUrl; 
+                            mediaElement.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='; 
                         }
 
-                        // Add classes for fade-in effect
                         mediaElement.classList.add('thumbnail-fade-in');
 
                         mediaElement.alt = `Media from ${pathSegments.join('/')}`;
@@ -882,7 +881,6 @@
                         galleryItem.appendChild(deleteBtn); 
                         galleryContainer.appendChild(galleryItem);
 
-                        // Observe the media element for lazy loading
                         lazyLoadObserver.observe(mediaElement);
                     } else {
                         console.warn(`Skipping invalid media item: filename is not a valid string for mediaItem:`, mediaItem);
@@ -892,7 +890,7 @@
                 galleryContainer.innerHTML = '<p class="text-center text-gray-600 col-span-full">No media found in this folder.</p>';
                 gallerySection.classList.add('hidden');
             }
-            updateActionButtonsVisibility(); // Call after rendering thumbnails to ensure correct button state
+            updateActionButtonsVisibility(); 
         }
 
         // 1. Load Years and Trash Button
@@ -911,15 +909,14 @@
                     const errorText = await response.text();
                     throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
                 }
-                const yearsData = await response.json(); // Expecting array of {year: "YYYY", count: N}
+                const yearsData = await response.json(); 
 
                 yearsContainer.innerHTML = ''; 
                 if (yearsData.length > 0) {
-                    // Years are already sorted descending by server
                     yearsData.forEach(yearItem => {
                         const link = document.createElement('a');
                         link.href = "#";
-                        link.classList.add('nav-link', 'folder-nav-button'); // Add folder-nav-button class
+                        link.classList.add('nav-link', 'folder-nav-button'); 
                         link.onclick = (e) => {
                             e.preventDefault();
                             currentPath = [yearItem.year]; 
@@ -932,7 +929,7 @@
                         link.appendChild(yearText);
 
                         if (yearItem.count !== undefined && yearItem.count !== null) {
-                            const countText = document.createElement('span'); // Corrected: Create a span element
+                            const countText = document.createElement('span'); 
                             countText.classList.add('item-count');
                             countText.textContent = `(${yearItem.count} items)`;
                             link.appendChild(countText);
@@ -946,7 +943,7 @@
                 // Add the Trash button as the last item
                 const trashLink = document.createElement('a');
                 trashLink.href = "#";
-                trashLink.classList.add('nav-link', 'trash-nav-link', 'folder-nav-button'); // Add folder-nav-button class
+                trashLink.classList.add('nav-link', 'trash-nav-link', 'folder-nav-button'); 
                 trashLink.onclick = (e) => {
                     e.preventDefault();
                     currentPath = [TRASH_FOLDER_NAME]; 
@@ -960,7 +957,7 @@
                 trashLink.appendChild(trashIcon);
 
                 const trashText = document.createElement('span');
-                trashText.textContent = ''; // Removed "Trash" text
+                trashText.textContent = ''; 
                 trashLink.appendChild(trashText);
 
                 // Fetch trash count separately for the button
@@ -969,7 +966,7 @@
                     if (trashResponse.ok) {
                         const trashData = await trashResponse.json();
                         if (trashData.count !== undefined && trashData.count !== null) {
-                            const trashCountText = document.createElement('span'); // Corrected: Create a span element
+                            const trashCountText = document.createElement('span'); 
                             trashCountText.classList.add('item-count');
                             trashCountText.textContent = `(${trashData.count} items)`;
                             trashLink.appendChild(trashCountText);
@@ -984,7 +981,7 @@
                 console.error('Error fetching years:', error);
                 yearsContainer.innerHTML = '<p class="text-center text-red-600 col-span-full">Error loading years. Is the server running?</p>';
             }
-            updateActionButtonsVisibility(); // Call after loading years to ensure correct button state
+            updateActionButtonsVisibility(); 
         }
 
         // 2. Load Months for a given Year AND files within that year folder
@@ -1004,16 +1001,15 @@
                     throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
                 }
                 const data = await response.json();
-                const monthsData = data.months; // Expecting array of {month: "MM", count: N}
+                const monthsData = data.months; 
                 const files = data.files; 
 
                 monthsContainer.innerHTML = '';
                 if (monthsData.length > 0) {
-                    // Months are already sorted numerically by server
                     monthsData.forEach(monthItem => {
                         const link = document.createElement('a');
                         link.href = "#";
-                        link.classList.add('nav-link', 'folder-nav-button'); // Add folder-nav-button class
+                        link.classList.add('nav-link', 'folder-nav-button'); 
                         link.onclick = (e) => {
                             e.preventDefault();
                             currentPath = [year, monthItem.month]; 
@@ -1025,7 +1021,7 @@
                         link.appendChild(monthText);
 
                         if (monthItem.count !== undefined && monthItem.count !== null) {
-                            const countText = document.createElement('span'); // Corrected: Create a span element
+                            const countText = document.createElement('span'); 
                             countText.classList.add('item-count');
                             countText.textContent = `(${monthItem.count} items)`;
                             link.appendChild(countText);
@@ -1050,7 +1046,7 @@
                 gallerySection.classList.add('hidden');
                 galleryContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading media for ${year}.</p>`;
             }
-            updateActionButtonsVisibility(); // Call after loading months to ensure correct button state
+            updateActionButtonsVisibility(); 
         }
 
         // 3. Load Days for a given Year and Month AND files within that month folder
@@ -1070,16 +1066,15 @@
                     throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
                 }
                 const data = await response.json();
-                const daysData = data.days; // Expecting array of {day: "DD", count: N}
+                const daysData = data.days; 
                 const files = data.files; 
 
                 daysContainer.innerHTML = '';
                 if (daysData.length > 0) {
-                    // Days are already sorted numerically by server
                     daysData.forEach(dayItem => {
                         const link = document.createElement('a');
                         link.href = "#";
-                        link.classList.add('nav-link', 'folder-nav-button'); // Add folder-nav-button class
+                        link.classList.add('nav-link', 'folder-nav-button'); 
                         link.onclick = (e) => {
                             e.preventDefault();
                             currentPath = [year, month, dayItem.day]; 
@@ -1091,7 +1086,7 @@
                         link.appendChild(dayText);
 
                         if (dayItem.count !== undefined && dayItem.count !== null) {
-                            const countText = document.createElement('span'); // Corrected: Create a span element
+                            const countText = document.createElement('span'); 
                             countText.classList.add('item-count');
                             countText.textContent = `(${dayItem.count} items)`;
                             link.appendChild(countText);
@@ -1116,7 +1111,7 @@
                 gallerySection.classList.add('hidden');
                 galleryContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading media for ${month}/${year}.</p>`;
             }
-            updateActionButtonsVisibility(); // Call after loading days to ensure correct button state
+            updateActionButtonsVisibility(); 
         }
 
         // 4. Load Photos/Videos for a given Year, Month, and Day
@@ -1150,7 +1145,7 @@
                 gallerySection.classList.add('hidden');
                 galleryContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading media for ${day}/${month}/${year}. Please check console for details.</p>`;
             }
-            updateActionButtonsVisibility(); // Call after loading photos to ensure correct button state
+            updateActionButtonsVisibility(); 
         }
 
         // --- Lightbox Functions ---
@@ -1161,7 +1156,7 @@
             if (slideshowInterval) {
                 clearInterval(slideshowInterval);
                 slideshowInterval = null;
-                isSlideshowRunning = false;
+                isSlideshowRunning = false; 
             }
 
             if (index >= 0 && index < currentDisplayedMedia.length) {
@@ -1170,8 +1165,8 @@
                 lightboxOverlay.classList.add('active');
                 document.body.style.overflow = 'hidden';
                 
-                updateSlideshowControls(); // Ensure slideshow icon is correct
-                updateActionButtonsVisibility(); // Update visibility of action buttons when lightbox opens
+                updateSlideshowControls(); 
+                updateActionButtonsVisibility(); 
             } else {
                 console.warn(`[openLightbox] Invalid index: ${index} or currentDisplayedMedia is empty.`);
             }
@@ -1179,36 +1174,44 @@
 
         // Updates the media displayed in the lightbox
         function updateLightboxMedia() {
+            // Always clear any existing interval when updating media
+            if (slideshowInterval) {
+                clearInterval(slideshowInterval);
+                slideshowInterval = null;
+            }
+
             lightboxMediaDisplay.innerHTML = '';
 
             const mediaItem = currentDisplayedMedia[currentMediaIndex];
             if (!mediaItem) {
                 console.error(`[updateLightboxMedia] mediaItem is undefined or null at index ${currentMediaIndex}. Cannot update lightbox.`);
-                return; // Exit if mediaItem is invalid
+                return; 
             }
             console.log(`[updateLightboxMedia] Current mediaItem:`, mediaItem);
 
             const isViewingTrash = currentPath.includes(TRASH_FOLDER_NAME);
 
-            let mediaUrlForLightbox; // This will be the URL for the full-res media in lightbox
+            let mediaUrlForLightbox; 
             let filename = mediaItem.filename;
             let displayPath;
 
             if (isViewingTrash) {
-                fileToProcessPath = mediaItem.relative_path_in_trash; // Path used for delete/restore API calls
-                mediaUrlForLightbox = `/${fileToProcessPath}`; // In trash, the trashed file is the one to display
+                fileToProcessPath = mediaItem.relative_path_in_trash; 
+                mediaUrlForLightbox = `/${fileToProcessPath}`; 
                 displayPath = `Trashed: ${filename}`;
-                if (mediaItem.original_path_from_metadata) { // Use the metadata field
-                    displayPath += ` (from: ${mediaItem.original_path_from_metadata})`;
+                // Use mediaItem.original_path for trash items
+                if (mediaItem.original_path) { 
+                    displayPath += ` (from: ${mediaItem.original_path})`;
                 }
             } else {
-                fileToProcessPath = mediaItem.original_path; // This is the path to the full-res original
-                mediaUrlForLightbox = `/${fileToProcessPath}`; // Always load original for lightbox
-                displayPath = mediaItem.original_path.replace(/\//g, ' -> '); // Use original_path for display
+                fileToProcessPath = mediaItem.original_path; 
+                mediaUrlForLightbox = `/${fileToProcessPath}`; 
+                displayPath = mediaItem.original_path.replace(/\//g, ' -> '); 
             }
             
             console.log(`[updateLightboxMedia] fileToProcessPath: ${fileToProcessPath}`);
             console.log(`[updateLightboxMedia] mediaUrlForLightbox: ${mediaUrlForLightbox}`);
+            console.log(`[updateLightboxMedia] displayPath for lightboxFilename: ${displayPath}`); // Added for debugging
 
             const fileExtension = filename.split('.').pop().toLowerCase();
             const isVideo = VIDEO_EXTENSIONS.includes('.' + fileExtension);
@@ -1219,17 +1222,22 @@
             if (isVideo) {
                 mediaElement = document.createElement('video');
                 mediaElement.controls = true;
-                mediaElement.autoplay = true;
                 mediaElement.preload = "auto";
+
+                if (isSlideshowRunning) {
+                    mediaElement.autoplay = true;
+                    // Add an event listener to advance the slideshow when the video ends
+                    mediaElement.addEventListener('ended', showNextImage);
+                }
             } else {
                 mediaElement = document.createElement('img');
-                // Removed click listener from image for slideshow control
-                // if (!isSlideshowRunning) {
-                //     mediaElement.addEventListener('click', closeLightbox);
-                // }
+                if (isSlideshowRunning) {
+                    // For images, set a timer to advance the slideshow
+                    slideshowInterval = setInterval(showNextImage, slideshowDelay);
+                }
             }
 
-            mediaElement.src = mediaUrlForLightbox; // Set the full-res URL here
+            mediaElement.src = mediaUrlForLightbox; 
             mediaElement.alt = `Full size media: ${filename}`;
             mediaElement.title = filename;
             mediaElement.classList.add('media-display', 'fade-in'); 
@@ -1253,13 +1261,12 @@
                 videoInLightbox.pause();
                 videoInLightbox.currentTime = 0;
             }
-            // Stop slideshow if running
             if (slideshowInterval) {
                 clearInterval(slideshowInterval);
                 slideshowInterval = null;
             }
             isSlideshowRunning = false;
-            updateSlideshowControls(); // Ensure controls are reset (visible)
+            updateSlideshowControls(); 
             lightboxFilename.textContent = ''; 
             updateActionButtonsVisibility();
         }
@@ -1268,34 +1275,38 @@
         function showNextImage() {
             if (currentDisplayedMedia.length === 0) return;
             currentMediaIndex = (currentMediaIndex + 1) % currentDisplayedMedia.length;
-            updateLightboxMedia();
+            updateLightboxMedia(); 
         }
 
         // Navigates to the previous image/video in the lightbox
         function showPreviousImage() {
             if (currentDisplayedMedia.length === 0) return;
             currentMediaIndex = (currentMediaIndex - 1 + currentDisplayedMedia.length) % currentDisplayedMedia.length;
-            updateLightboxMedia();
+            updateLightboxMedia(); 
         }
 
         // --- Slideshow Functions ---
         async function toggleSlideshow() {
             if (isSlideshowRunning) {
-                clearInterval(slideshowInterval);
-                slideshowInterval = null;
+                if (slideshowInterval) {
+                    clearInterval(slideshowInterval);
+                    slideshowInterval = null;
+                }
+                const videoInLightbox = lightboxMediaDisplay.querySelector('video');
+                if (videoInLightbox) {
+                    videoInLightbox.pause(); 
+                }
                 isSlideshowRunning = false;
                 console.log('Slideshow paused.');
             } else {
-                // Always fetch new media when starting a slideshow to ensure it's current
                 let apiUrl = '';
-                if (currentPath.length === 1) { // Year selected
+                if (currentPath.length === 1) { 
                     apiUrl = `/api/recursive_media/year/${currentPath[0]}`;
-                } else if (currentPath.length === 2) { // Month selected
+                } else if (currentPath.length === 2) { 
                     apiUrl = `/api/recursive_media/month/${currentPath[0]}/${currentPath[1]}`;
-                } else if (currentPath.length === 3) { // Day selected
+                } else if (currentPath.length === 3) { 
                     apiUrl = `/api/photos/${currentPath[0]}/${currentPath[1]}/${currentPath[2]}`;
                 } else {
-                    // This case should ideally not be reached if the button is hidden in trash and on home
                     alert('Please select a year, month, or day to start a slideshow.');
                     return;
                 }
@@ -1314,15 +1325,11 @@
                     }
 
                     currentDisplayedMedia = recursiveFiles.sort((a, b) => {
-                        // Sort by original_path for consistent slideshow order
                         let pathA = a.original_path ? a.original_path.toLowerCase() : '';
                         let pathB = b.original_path ? b.original_path.toLowerCase() : '';
                         return pathA.localeCompare(pathB);
                     });
 
-                    // If the lightbox is NOT currently active when slideshow is initiated,
-                    // reset currentMediaIndex to 0 to start from the beginning of the folder.
-                    // If the lightbox IS active, keep currentMediaIndex as is (it's already on the correct image).
                     if (!lightboxOverlay.classList.contains('active')) {
                         currentMediaIndex = 0;
                     }
@@ -1334,13 +1341,8 @@
                     return; 
                 }
                 
-                // Ensure lightbox is open and showing the correct image (either first image for new slideshow or current for resume)
-                openLightbox(currentMediaIndex); 
-
                 isSlideshowRunning = true;
-                slideshowInterval = setInterval(() => {
-                    showNextImage();
-                }, slideshowDelay);
+                openLightbox(currentMediaIndex); 
                 console.log('Slideshow resumed/started.');
             }
             updateSlideshowControls(); 
@@ -1371,7 +1373,6 @@
                 slideshowBtnLightbox.title = 'Resume slideshow';
             }
             
-            // Hide/show navigation arrows based on slideshow state (only affects lightbox arrows)
             if (lightboxOverlay.classList.contains('active')) {
                 if (isSlideshowRunning) {
                     lightboxPrev.style.opacity = '0';
@@ -1402,25 +1403,26 @@
         // Event listeners for delete/restore buttons (now in lightbox)
         trashDeleteBtn.addEventListener('click', () => {
             const isViewingTrash = currentPath.includes(TRASH_FOLDER_NAME);
-            // Ensure fileToProcessPath is set from the currently displayed media item in lightbox
             const mediaItemInLightbox = currentDisplayedMedia[currentMediaIndex];
             const pathForAction = isViewingTrash ? mediaItemInLightbox.relative_path_in_trash : mediaItemInLightbox.original_path;
             showConfirmationModal(pathForAction, isViewingTrash, false); 
         });
 
         trashRestoreBtn.addEventListener('click', () => {
-            // Ensure fileToProcessPath is set from the currently displayed media item in lightbox
             const mediaItemInLightbox = currentDisplayedMedia[currentMediaIndex];
-            const pathForAction = mediaItemInLightbox.relative_path_in_trash; // Always use relative_path_in_trash for restore
+            const pathForAction = mediaItemInLightbox.relative_path_in_trash; 
             showConfirmationModal(pathForAction, false, true); 
         });
 
         // Add click listener to lightbox media display for pause/resume
-        lightboxMediaDisplay.addEventListener('click', () => {
+        lightboxMediaDisplay.addEventListener('click', (event) => {
+            // Prevent closing if the click was on the video controls
+            if (event.target.tagName === 'VIDEO' && event.target.controls) {
+                return; 
+            }
             if (isSlideshowRunning) {
                 toggleSlideshow(); 
             } else {
-                // Only close lightbox on click if slideshow is NOT running
                 closeLightbox();
             }
         });
@@ -1428,7 +1430,7 @@
 
         // Close lightbox when clicking outside the media (on the overlay itself)
         lightboxOverlay.addEventListener('click', (event) => {
-            // Only close if clicking on the overlay directly, not on children like media, arrows, buttons
+            // Only close if the click is directly on the overlay or the close button, not on the media itself or controls
             if (event.target === lightboxOverlay || event.target === lightboxClose) {
                 closeLightbox();
             }
@@ -1510,7 +1512,6 @@
 
                 if (response.ok) {
                     console.log('File moved to trash successfully.');
-                    // Re-load the current folder to reflect the movement
                     if (currentPath.length === 1 && currentPath[0] === TRASH_FOLDER_NAME) {
                         loadTrashContent(); 
                     } else if (currentPath.length === 1) { 
@@ -1530,7 +1531,6 @@
             } catch (error) {
                 console.error('Network or unexpected error during file movement:', error);
                 alert(`An unexpected error occurred: ${error.message}`); 
-                // Ensure the UI is reloaded even on error to reflect potential partial changes
                 if (currentPath.length === 1 && currentPath[0] === TRASH_FOLDER_NAME) {
                     loadTrashContent(); 
                 } else if (currentPath.length === 1) { 
@@ -1564,12 +1564,12 @@
                     const errorData = await response.json();
                     console.error('Failed to permanently delete file:', errorData.error);
                     alert(`Error deleting file forever: ${errorData.error}`);
-                    loadTrashContent(); // Reload trash content on error
+                    loadTrashContent(); 
                 }
             } catch (error) {
                 console.error('Network or unexpected error during permanent deletion:', error);
                 alert(`An unexpected error occurred: ${error.message}`);
-                loadTrashContent(); // Reload trash content on error
+                loadTrashContent(); 
             }
         }
 
@@ -1592,12 +1592,12 @@
                     const errorData = await response.json();
                     console.error('Failed to restore file:', errorData.error);
                     alert(`Error restoring file: ${errorData.error}`);
-                    loadTrashContent(); // Reload trash content on error
+                    loadTrashContent(); 
                 }
             } catch (error) {
                 console.error('Network or unexpected error during restoration:', error);
                 alert(`An unexpected error occurred: ${error.message}`);
-                loadTrashContent(); // Reload trash content on error
+                loadTrashContent(); 
             }
         }
 
@@ -1619,7 +1619,6 @@
                     const errorText = await response.text();
                     throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
                 }
-                // Expecting an object with 'files' and 'count' from server.py's list_trash_content
                 const trashData = await response.json(); 
                 displayMediaThumbnails(trashData.files, [TRASH_FOLDER_NAME]);
 
@@ -1627,7 +1626,7 @@
                 console.error('Error fetching trash content:', error);
                 galleryContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading trash content: ${error.message}.</p>`;
             }
-            updateActionButtonsVisibility(); // Call after loading trash content to ensure correct button state
+            updateActionButtonsVisibility(); 
         }
 
 

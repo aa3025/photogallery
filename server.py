@@ -2,15 +2,14 @@
 import os
 import shutil # Import shutil for moving files
 import json   # Import json for reading/writing metadata
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, abort
 from flask_cors import CORS # Import CORS for cross-origin requests
 from datetime import datetime # For timestamping restored files if needed
-from PIL import Image, ExifTags, __version__ as pillow_version # Import Pillow for image processing, and get its version
-from pillow_heif import register_heif_opener # Import register_heif_opener
-import rawpy # NEW: Import rawpy for RAW file processing
-import numpy as np # NEW: Import numpy for array manipulation
+from PIL import Image, ExifTags # Import Pillow for image processing
+import rawpy # For RAW image processing
+from pillow_heif import register_heif_opener # For HEIC support
 
-# Register the HEIF opener for Pillow
+# Register HEIF opener for Pillow
 register_heif_opener()
 
 app = Flask(__name__)
@@ -19,7 +18,7 @@ CORS(app) # Enable CORS for all routes, allowing your HTML to fetch data
 # --- Configuration for your Image Library ---
 # Set this to the ABSOLUTE path of the directory that contains your YYYY (year) folders.
 # Example: If your images are in /Users/YourUser/Pictures/MyPhotos/2023/01/01
-# then image_library_root should be '/Users/YourUser/Pictures/MyPhotos'
+# then image_library_root should be '/Users/YourUser/Pictures/MyPhotoLibrary'
 # IMPORTANT: This should be the absolute path to your media folder.
 # For example: '/Users/youruser/Pictures/MyPhotoLibrary' or 'C:\\Users\\youruser\\Pictures\\MyPhotoLibrary'
 # Ensure this path is correct for your environment.
@@ -29,29 +28,12 @@ image_library_root = os.path.abspath('/Volumes/aa3025_bkp/Photos_Backup') # Hard
 TRASH_FOLDER_NAME = '_Trash'
 TRASH_ROOT = os.path.join(image_library_root, TRASH_FOLDER_NAME)
 
-# Define the thumbnail subfolder name (hidden) and max dimension
-THUMBNAIL_SUBFOLDER_NAME = '.thumbnails'
-THUMBNAIL_MAX_DIMENSION = 480 # Max width/height for thumbnails
+# Define the metadata file name for counts
+COUNT_META_FILENAME = '_count.meta'
 
-# Determine the resampling filter based on Pillow version
-# Image.Resampling was introduced in Pillow 9.1.0
-try:
-    # Check if Pillow version is 9.1.0 or newer
-    if tuple(map(int, pillow_version.split('.'))) >= (9, 1, 0):
-        RESAMPLING_FILTER = Image.Resampling.LANCZOS
-    else:
-        RESAMPLING_FILTER = Image.LANCZOS
-    print(f"Using Pillow version {pillow_version} with resampling filter: {RESAMPLING_FILTER}")
-except AttributeError:
-    # Fallback for very old Pillow versions that might not even have Image.LANCZOS directly
-    # This scenario is less likely with modern installations but good to be robust.
-    RESAMPLING_FILTER = Image.LANCZOS
-    print(f"Pillow version {pillow_version} is old, using Image.LANCZOS as fallback.")
-except Exception as e:
-    # Catch any other potential errors during version check
-    RESAMPLING_FILTER = Image.LANCZOS
-    print(f"Error determining Pillow resampling filter: {e}. Defaulting to Image.LANCZOS.")
-
+# Thumbnail configuration
+THUMBNAIL_DIR_NAME = '.thumbnails' # Hidden directory for thumbnails
+THUMBNAIL_MAX_DIMENSION = 480 # Max width or height for thumbnails
 
 # Ensure the image_library_root exists
 if not os.path.isdir(image_library_root):
@@ -67,253 +49,298 @@ if not os.path.exists(TRASH_ROOT):
 
 
 # Define allowed image and video extensions globally for consistency
-# Added more common RAW formats for explicit handling
 IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.avif')
-# Separated RAW extensions for specific rawpy handling
 RAW_EXTENSIONS = ('.nef', '.nrw', '.cr2', '.cr3', '.crw', '.arw', '.srf', '.sr2',
                   '.orf', '.raf', '.rw2', '.raw', '.dng', '.kdc', '.dcr', '.erf',
                   '.3fr', '.mef', '.pef', '.x3f')
-
 VIDEO_EXTENSIONS = ('.mp4', '.mov', '.webm', '.ogg', '.avi', '.mkv')
-MEDIA_EXTENSIONS = IMAGE_EXTENSIONS + RAW_EXTENSIONS + VIDEO_EXTENSIONS # Combine all for general media check
+MEDIA_EXTENSIONS = IMAGE_EXTENSIONS + RAW_EXTENSIONS + VIDEO_EXTENSIONS
 
-# Helper function to get the path for a thumbnail
-def get_thumbnail_full_path(original_full_path):
-    """
-    Generates the expected full path for a thumbnail.
-    Thumbnails are stored in a hidden '.thumbnails' subfolder within the original file's directory.
-    """
-    original_dir = os.path.dirname(original_full_path)
-    original_filename = os.path.basename(original_full_path)
-    thumbnail_dir = os.path.join(original_dir, THUMBNAIL_SUBFOLDER_NAME)
-    thumbnail_filename = original_filename # Keep original filename for thumbnail
-    return os.path.join(thumbnail_dir, thumbnail_filename)
-
-# Helper function to generate and save a thumbnail
-def generate_and_save_thumbnail(original_full_path, thumbnail_full_path):
-    """
-    Generates a thumbnail for an image and saves it to the specified path.
-    Creates the thumbnail directory if it doesn't exist.
-    Corrects orientation based on EXIF data.
-    Handles RAW files using rawpy for better quality.
-    """
-    try:
-        # Ensure the thumbnail directory exists
-        os.makedirs(os.path.dirname(thumbnail_full_path), exist_ok=True)
-        
-        file_extension = os.path.splitext(original_full_path)[1].lower()
-        img = None # Initialize img to None
-
-        if file_extension in RAW_EXTENSIONS:
-            try:
-                # Use rawpy to open and postprocess RAW files
-                with rawpy.imread(original_full_path) as raw:
-                    # Postprocess the RAW image to a renderable format (e.g., sRGB)
-                    # use_camera_wb=True applies camera's white balance
-                    # no_auto_bright=True prevents rawpy from doing its own auto-brightness
-                    # output_bps=8 outputs 8-bit per channel (standard for JPEGs)
-                    rgb = raw.postprocess(use_camera_wb=True, no_auto_bright=True, output_bps=8)
-                    img = Image.fromarray(rgb)
-            except rawpy.LibRawError as e:
-                print(f"rawpy error processing RAW file {original_full_path}: {e}")
-                # Fallback to Pillow's default open if rawpy fails (might still fail, but worth a try)
-                try:
-                    img = Image.open(original_full_path)
-                except Exception as e_pillow:
-                    print(f"Pillow fallback also failed for RAW file {original_full_path}: {e_pillow}")
-                    return False # Cannot process this file
-            except Exception as e:
-                print(f"General error processing RAW file {original_full_path} with rawpy: {e}")
-                return False # Cannot process this file
-        else:
-            # For non-RAW image files (JPG, PNG, HEIC, etc.), use Pillow's default open
-            try:
-                img = Image.open(original_full_path)
-            except Exception as e:
-                print(f"Pillow error opening image file {original_full_path}: {e}")
-                return False # Cannot process this file
-
-        if img is None: # If img is still None, something went wrong
-            return False
-
-        # Correct orientation based on EXIF data (Pillow's method)
-        try:
-            exif = img._getexif()
-            if exif:
-                for orientation_tag in ExifTags.TAGS.keys():
-                    if ExifTags.TAGS[orientation_tag] == 'Orientation':
-                        break
-                else:
-                    orientation_tag = None
-
-                if orientation_tag in exif:
-                    orientation = exif[orientation_tag]
-                    if orientation == 2:
-                        img = img.transpose(Image.FLIP_LEFT_RIGHT)
-                    elif orientation == 3:
-                        img = img.transpose(Image.ROTATE_180)
-                    elif orientation == 4:
-                        img = img.transpose(Image.FLIP_TOP_BOTTOM)
-                    elif orientation == 5:
-                        img = img.transpose(Image.TRANSPOSE)
-                    elif orientation == 6:
-                        img = img.transpose(Image.ROTATE_270)
-                    elif orientation == 7:
-                        img = img.transpose(Image.TRANSVERSE)
-                    elif orientation == 8:
-                        img = img.transpose(Image.ROTATE_90)
-                    
-                    # Note: Removing EXIF orientation tag is complex without a dedicated library.
-                    # For now, we rely on the rotation applied above.
-        except Exception as e:
-            print(f"Warning: Could not read/correct EXIF orientation for {original_full_path}: {e}")
-
-        # Convert to RGB if not already (e.g., for PNGs with alpha channel or grayscale)
-        if img.mode in ('RGBA', 'LA', 'P') or img.mode == 'L': # 'L' for grayscale
-            img = img.convert('RGB')
-        
-        # Calculate new size maintaining aspect ratio, using the determined RESAMPLING_FILTER
-        img.thumbnail((THUMBNAIL_MAX_DIMENSION, THUMBNAIL_MAX_DIMENSION), RESAMPLING_FILTER)
-        
-        # Save the thumbnail. Use JPEG for consistency and smaller file size,
-        # unless original is GIF (which should remain GIF for animation).
-        save_format = 'JPEG'
-        if original_full_path.lower().endswith('.gif'):
-            save_format = 'GIF'
-        
-        img.save(thumbnail_full_path, format=save_format)
-        return True
-    except Exception as e:
-        print(f"Error generating thumbnail for {original_full_path}: {e}")
-        return False
 
 # Helper function to get directories and files in a given path
-def get_contents_structured(path, is_trash_folder=False):
+def get_contents_structured(path):
     """
-    Lists directories and media files in a given path, returning structured data
-    including original and thumbnail paths.
+    Lists directories and files in a given path.
+    Returns a dictionary: {"directories": [...], "files": [...]}.
+    Files are returned as dictionaries with 'filename' and 'original_path'.
     """
     if not os.path.isdir(path):
         return {"directories": [], "files": []}
     
     directories = []
-    files_data = [] # Will store dictionaries with original and thumbnail paths
+    files = []
     
     for item in os.listdir(path):
         full_path = os.path.join(path, item)
-        # Exclude hidden files/directories (starting with '.') and metadata files
-        if item.startswith('.') or item.endswith('.meta'):
+        # Exclude hidden files/directories (starting with '.')
+        # Also exclude metadata files (ending with .meta) and thumbnail directories
+        if item.startswith('.') or item.endswith('.meta') or item == THUMBNAIL_DIR_NAME:
             continue
-        
         if os.path.isdir(full_path):
             directories.append(item)
         elif os.path.isfile(full_path):
+            # Only include files with allowed media extensions
             if item.lower().endswith(MEDIA_EXTENSIONS):
-                # Construct relative path from image_library_root
-                relative_path_from_root = os.path.relpath(full_path, image_library_root)
-                
-                file_info = {
-                    "original_path": relative_path_from_root,
-                    "filename": item # Add filename for convenience
-                }
+                # Construct the relative path from image_library_root
+                relative_path = os.path.relpath(full_path, image_library_root)
+                files.append({"filename": item, "original_path": relative_path})
+    
+    return {"directories": sorted(directories), "files": sorted(files, key=lambda x: x['filename'])}
 
-                if is_trash_folder:
-                    # For trash, the "thumbnail" is still the trashed file itself,
-                    # but we also need the original_path for restoration.
-                    file_info["relative_path_in_trash"] = relative_path_from_root # This is the path in trash
-                    file_info["thumbnail_path"] = relative_path_from_root # For trash, we serve the trashed file itself as thumbnail
-                    # Load metadata to get the original_path for display in frontend
-                    metadata_path = f"{full_path}.meta"
-                    if os.path.exists(metadata_path):
-                        try:
-                            with open(metadata_path, 'r') as f:
-                                metadata = json.load(f)
-                            file_info["original_path_from_metadata"] = metadata.get("original_relative_path")
-                        except Exception as e:
-                            print(f"Error reading metadata for {item} in trash: {e}")
-                            file_info["original_path_from_metadata"] = "Unknown Original Path"
-                else:
-                    # For non-trash images, provide a thumbnail URL
-                    if item.lower().endswith(IMAGE_EXTENSIONS + RAW_EXTENSIONS): # Check against all image types
-                        thumbnail_full_path = get_thumbnail_full_path(full_path)
-                        # Construct relative path for thumbnail
-                        thumbnail_relative_path = os.path.relpath(thumbnail_full_path, image_library_root)
-                        file_info["thumbnail_path"] = thumbnail_relative_path
-                    else: # For videos, thumbnail is the video itself for now
-                        file_info["thumbnail_path"] = relative_path_from_root
-                
-                files_data.append(file_info)
+# Helper function to get files (images/videos)
+# This function is defined globally and used by list_trash_content
+def get_files(path):
+    # This function uses the globally defined MEDIA_EXTENSIONS
+    # Exclude metadata files here too
+    return sorted([f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f)) and f.lower().endswith(MEDIA_EXTENSIONS) and not f.endswith('.meta')])
+
+# NEW: Helper function to recursively get all media files (used for slideshows)
+def get_all_media_recursive(path):
+    """
+    Recursively lists all media files (images and videos) in a given path and its subdirectories.
+    Returns a list of dictionaries: [{"filename": "...", "original_path": "..."}, ...].
+    """
+    all_files = []
+    if not os.path.isdir(path):
+        return []
+
+    for root, _, files in os.walk(path):
+        current_relative_root = os.path.relpath(root, image_library_root)
+        if current_relative_root == '.': # If root is the image_library_root itself
+            current_relative_root = ''
+        
+        # Exclude trash folder content from recursive scans for regular views
+        # This prevents accidental inclusion of trash items in regular slideshows
+        if TRASH_FOLDER_NAME in current_relative_root.split(os.sep):
+            continue
+
+        # Exclude thumbnail directories from recursive scan
+        if THUMBNAIL_DIR_NAME in current_relative_root.split(os.sep):
+            continue
+
+        for file in files:
+            if file.lower().endswith(MEDIA_EXTENSIONS) and not file.endswith('.meta'):
+                # Construct the relative path from image_library_root
+                full_relative_path = os.path.join(current_relative_root, file) if current_relative_root else file
+                all_files.append({"filename": file, "original_path": full_relative_path})
+    return sorted(all_files, key=lambda x: x['original_path']) # Sort by original_path
+
+# NEW: Function to recursively count media files
+def _get_recursive_media_count(path):
+    """
+    Recursively counts all media files (images and videos) in a given path and its subdirectories.
+    """
+    count = 0
+    if not os.path.isdir(path):
+        return 0
     
-    # Sort directories and files_data
-    sorted_directories = sorted(directories)
-    # Sort files_data by filename
-    sorted_files_data = sorted(files_data, key=lambda x: x['filename'].lower())
+    for root, _, files in os.walk(path):
+        # Exclude trash folder content from recursive counts for regular folders
+        # This ensures counts for years/months/days don't include trashed items
+        if TRASH_FOLDER_NAME in os.path.relpath(root, image_library_root).split(os.sep) and root != TRASH_ROOT:
+            continue
+        
+        # Exclude thumbnail directories from recursive count
+        if THUMBNAIL_DIR_NAME in os.path.relpath(root, image_library_root).split(os.sep):
+            continue
+
+        for file in files:
+            if file.lower().endswith(MEDIA_EXTENSIONS) and not file.endswith('.meta') and not file.startswith('.'):
+                count += 1
+    return count
+
+# NEW: Function to read item count from a folder's meta file
+def _read_folder_item_count(folder_path):
+    meta_file_path = os.path.join(folder_path, COUNT_META_FILENAME)
+    if os.path.exists(meta_file_path):
+        try:
+            with open(meta_file_path, 'r') as f:
+                metadata = json.load(f)
+                return metadata.get("item_count", 0)
+        except json.JSONDecodeError:
+            print(f"Warning: Could not decode {COUNT_META_FILENAME} in {folder_path}. Recalculating.")
+            return None # Indicate corruption, trigger recalculation
+    return None
+
+# NEW: Function to write/update item count to a folder's meta file
+def _update_folder_item_count_meta(folder_path):
+    if not os.path.isdir(folder_path):
+        return # Cannot update count for non-existent folder
+
+    count = _get_recursive_media_count(folder_path)
+    meta_file_path = os.path.join(folder_path, COUNT_META_FILENAME)
+    try:
+        with open(meta_file_path, 'w') as f:
+            json.dump({"item_count": count}, f)
+        print(f"Updated count for '{os.path.basename(folder_path)}': {count}")
+    except Exception as e:
+        print(f"Error writing {COUNT_META_FILENAME} for {folder_path}: {e}")
+
+# NEW: Function to perform initial scan and populate all _count.meta files
+def _initial_scan_and_populate_counts():
+    print("Performing initial scan and populating folder item counts...")
     
-    return {"directories": sorted_directories, "files": sorted_files_data}
+    # Update count for the trash folder first
+    _update_folder_item_count_meta(TRASH_ROOT)
+
+    # Update counts for years, months, and days
+    if os.path.isdir(image_library_root):
+        for year_dir in os.listdir(image_library_root):
+            year_path = os.path.join(image_library_root, year_dir)
+            if os.path.isdir(year_path) and year_dir.isdigit() and len(year_dir) == 4 and year_dir != TRASH_FOLDER_NAME:
+                _update_folder_item_count_meta(year_path) # Update year's count
+                for month_dir in os.listdir(year_path):
+                    month_path = os.path.join(year_path, month_dir)
+                    if os.path.isdir(month_path) and month_dir.isdigit() and len(month_dir) == 2:
+                        _update_folder_item_count_meta(month_path) # Update month's count
+                        for day_dir in os.listdir(month_path):
+                            day_path = os.path.join(month_path, day_dir)
+                            if os.path.isdir(day_path) and day_dir.isdigit() and len(day_dir) == 2:
+                                _update_folder_item_count_meta(day_path) # Update day's count
+    print("Initial scan complete.")
+
+# Helper function to ensure thumbnail directory exists for a given original file path
+def _ensure_thumbnail_dir_exists(original_file_path):
+    """Ensures the .thumbnails directory exists for a given original file path."""
+    thumbnail_dir = os.path.join(os.path.dirname(original_file_path), THUMBNAIL_DIR_NAME)
+    os.makedirs(thumbnail_dir, exist_ok=True)
+    return thumbnail_dir
+
+# Helper function to generate and save a thumbnail
+def _generate_thumbnail(original_file_path):
+    """
+    Generates a thumbnail for an image or RAW file and saves it.
+    Returns the path to the generated thumbnail.
+    """
+    # Determine the thumbnail file path
+    thumbnail_dir = _ensure_thumbnail_dir_exists(original_file_path)
+    base_filename = os.path.basename(original_file_path)
+    thumbnail_filename = f"{os.path.splitext(base_filename)[0]}.webp" # Use webp for efficiency
+    thumbnail_path = os.path.join(thumbnail_dir, thumbnail_filename)
+
+    # Check if thumbnail already exists and is up-to-date
+    if os.path.exists(thumbnail_path) and os.path.getmtime(thumbnail_path) >= os.path.getmtime(original_file_path):
+        return thumbnail_path # Thumbnail is current, no need to regenerate
+
+    print(f"Generating thumbnail for: {original_file_path}")
+    try:
+        file_extension = os.path.splitext(original_file_path)[1].lower()
+
+        if file_extension in RAW_EXTENSIONS:
+            # Use rawpy for RAW images
+            with rawpy.imread(original_file_path) as raw:
+                # Get a thumbnail from the raw image (if available) or a small RGB image
+                # Using postprocess() to get a renderable image
+                rgb = raw.postprocess(use_camera_wb=True, no_auto_bright=True, output_bps=8)
+                image = Image.fromarray(rgb)
+        else:
+            # Use Pillow for standard image formats
+            image = Image.open(original_file_path)
+
+        # Apply EXIF orientation
+        try:
+            if hasattr(image, '_getexif'):
+                exif = image._getexif()
+                if exif:
+                    for orientation_tag in ExifTags.TAGS.keys():
+                        if ExifTags.TAGS[orientation_tag] == 'Orientation':
+                            break
+                    
+                    orientation = exif.get(orientation_tag)
+                    if orientation == 3:
+                        image = image.rotate(180, expand=True)
+                    elif orientation == 6:
+                        image = image.rotate(270, expand=True)
+                    elif orientation == 8:
+                        image = image.rotate(90, expand=True)
+        except Exception as e:
+            print(f"Error applying EXIF orientation for {original_file_path}: {e}")
+
+        # Resize the image while maintaining aspect ratio
+        image.thumbnail((THUMBNAIL_MAX_DIMENSION, THUMBNAIL_MAX_DIMENSION), Image.LANCZOS)
+        
+        # Save the thumbnail in WEBP format
+        image.save(thumbnail_path, "WEBP")
+        return thumbnail_path
+
+    except Exception as e:
+        print(f"Error generating thumbnail for {original_file_path}: {e}")
+        # Return a placeholder or indicate failure
+        return None
+
 
 # API endpoint to list years
 @app.route('/api/years')
 def list_years():
-    """Lists all year directories (e.g., '2023', '2024') in the image_library_root."""
-    years = []
+    """Lists all year directories (e.g., '2023', '2024') in the image_library_root, with item counts."""
+    years_data = []
     if os.path.isdir(image_library_root):
         for item in os.listdir(image_library_root):
             full_path = os.path.join(image_library_root, item)
-            # Ensure it's a directory, is a 4-digit number, and is not the trash folder
             if os.path.isdir(full_path) and item.isdigit() and len(item) == 4 and item != TRASH_FOLDER_NAME:
-                
-                # Count media items for the year (recursive count)
-                year_media_count = len(get_all_media_recursive(full_path))
-                years.append({"year": item, "count": year_media_count})
+                count = _read_folder_item_count(full_path)
+                if count is None: # Recalculate if meta file is missing or corrupted
+                    _update_folder_item_count_meta(full_path)
+                    count = _read_folder_item_count(full_path) # Read again after update
+                years_data.append({"year": item, "count": count})
     
-    # Sort years by year number descending
-    return jsonify(sorted(years, key=lambda x: x['year'], reverse=True))
+    # Sort by year (descending)
+    years_data.sort(key=lambda x: int(x['year']), reverse=True)
+    return jsonify(years_data)
 
 # API endpoint to list months for a given year, and files within that year folder
 @app.route('/api/months/<year>')
 def list_months(year):
-    """Lists all month directories and media files for a given year."""
+    """Lists all month directories and media files for a given year, with item counts."""
     year_path = os.path.join(image_library_root, year)
     if not os.path.isdir(year_path):
         return jsonify({"error": "Year not found"}), 404
     
-    contents = get_contents_structured(year_path)
+    contents = get_contents_structured(year_path) # Now returns files as dicts
     
-    # Filter directories to ensure they are valid months (2 digits)
-    valid_months = []
-    for d in contents["directories"]:
-        if d.isdigit() and len(d) == 2:
-            month_path = os.path.join(year_path, d)
-            month_media_count = len(get_all_media_recursive(month_path))
-            valid_months.append({"month": d, "count": month_media_count})
+    months_data = []
+    for month_dir in contents["directories"]:
+        if month_dir.isdigit() and len(month_dir) == 2:
+            month_path = os.path.join(year_path, month_dir)
+            count = _read_folder_item_count(month_path)
+            if count is None: # Recalculate if meta file is missing or corrupted
+                _update_folder_item_count_meta(month_path)
+                count = _read_folder_item_count(month_path) # Read again after update
+            months_data.append({"month": month_dir, "count": count})
+    
+    # contents["files"] already contains dictionaries with "filename" and "original_path"
+    # No need to construct full relative paths here, they are already in the dicts
     
     # Sort months numerically
-    sorted_months = sorted(valid_months, key=lambda x: int(x['month']))
-
-    return jsonify({"months": sorted_months, "files": contents["files"]})
+    months_data.sort(key=lambda x: int(x['month']))
+    return jsonify({"months": months_data, "files": contents["files"]})
 
 # API endpoint to list days for a given year and month, and files within that month folder
 @app.route('/api/days/<year>/<month>')
 def list_days(year, month):
-    """Lists all day directories and media files for a given year and month."""
+    """Lists all day directories and media files for a given year and month, with item counts."""
     month_path = os.path.join(image_library_root, year, month)
     if not os.path.isdir(month_path):
         return jsonify({"error": "Month not found"}), 404
     
-    contents = get_contents_structured(month_path)
+    contents = get_contents_structured(month_path) # Now returns files as dicts
     
-    # Filter directories to ensure they are valid days (2 digits)
-    valid_days = []
-    for d in contents["directories"]:
-        if d.isdigit() and len(d) == 2:
-            day_path = os.path.join(month_path, d)
-            day_media_count = len(get_all_media_recursive(day_path))
-            valid_days.append({"day": d, "count": day_media_count})
-    
-    # Sort days numerically
-    sorted_days = sorted(valid_days, key=lambda x: int(x['day']))
+    days_data = []
+    for day_dir in contents["directories"]:
+        if day_dir.isdigit() and len(day_dir) == 2:
+            day_path = os.path.join(month_path, day_dir)
+            count = _read_folder_item_count(day_path)
+            if count is None: # Recalculate if meta file is missing or corrupted
+                _update_folder_item_count_meta(day_path)
+                count = _read_folder_item_count(day_path) # Read again after update
+            days_data.append({"day": day_dir, "count": count})
 
-    return jsonify({"days": sorted_days, "files": contents["files"]})
+    # contents["files"] already contains dictionaries with "filename" and "original_path"
+    # No need to construct full relative paths here, they are already in the dicts
+
+    # Sort days numerically
+    days_data.sort(key=lambda x: int(x['day']))
+    return jsonify({"days": days_data, "files": contents["files"]})
 
 # API endpoint to list photos for a given year, month, and day
 @app.route('/api/photos/<year>/<month>/<day>')
@@ -323,9 +350,10 @@ def list_photos(year, month, day):
     if not os.path.isdir(day_path):
         return jsonify({"error": "Day not found"}), 404
     
-    contents = get_contents_structured(day_path)
+    contents = get_contents_structured(day_path) # Now returns files as dicts
     
-    return jsonify(contents["files"]) # Return the list of file info dictionaries
+    # contents["files"] already contains dictionaries with "filename" and "original_path"
+    return jsonify(contents["files"]) # Already sorted by filename in get_contents_structured
 
 # NEW: API endpoint to get all media recursively for a given year
 @app.route('/api/recursive_media/year/<year>')
@@ -335,24 +363,8 @@ def get_recursive_media_for_year(year):
     if not os.path.isdir(year_path):
         return jsonify({"error": "Year not found"}), 404
     
-    # get_contents_structured is designed for single directory.
-    # get_all_media_recursive is better for this.
-    files_data = []
-    for f_path in get_all_media_recursive(year_path):
-        full_path = os.path.join(image_library_root, f_path)
-        file_info = {
-            "original_path": f_path,
-            "filename": os.path.basename(f_path)
-        }
-        if f_path.lower().endswith(IMAGE_EXTENSIONS + RAW_EXTENSIONS): # Check against all image types
-            thumbnail_full_path = get_thumbnail_full_path(full_path)
-            thumbnail_relative_path = os.path.relpath(thumbnail_full_path, image_library_root)
-            file_info["thumbnail_path"] = thumbnail_relative_path
-        else: # For videos, thumbnail is the video itself for now
-            file_info["thumbnail_path"] = f_path
-        files_data.append(file_info)
-
-    return jsonify(sorted(files_data, key=lambda x: x['original_path'].lower()))
+    files = get_all_media_recursive(year_path) # Now returns files as dicts
+    return jsonify(files)
 
 # NEW: API endpoint to get all media recursively for a given year and month
 @app.route('/api/recursive_media/month/<year>/<month>')
@@ -362,87 +374,50 @@ def get_recursive_media_for_month(year, month):
     if not os.path.isdir(month_path):
         return jsonify({"error": "Month not found"}), 404
     
-    files_data = []
-    for f_path in get_all_media_recursive(month_path):
-        full_path = os.path.join(image_library_root, f_path)
-        file_info = {
-            "original_path": f_path,
-            "filename": os.path.basename(f_path)
-        }
-        if f_path.lower().endswith(IMAGE_EXTENSIONS + RAW_EXTENSIONS): # Check against all image types
-            thumbnail_full_path = get_thumbnail_full_path(full_path)
-            thumbnail_relative_path = os.path.relpath(thumbnail_full_path, image_library_root)
-            file_info["thumbnail_path"] = thumbnail_relative_path
-        else: # For videos, thumbnail is the video itself for now
-            file_info["thumbnail_path"] = f_path
-        files_data.append(file_info)
-
-    return jsonify(sorted(files_data, key=lambda x: x['original_path'].lower()))
-
-# Helper function to recursively get all media files (original paths)
-def get_all_media_recursive(path):
-    """
-    Recursively lists all media files (images and videos) in a given path and its subdirectories.
-    Returns a list of relative file paths from image_library_root.
-    This function specifically excludes thumbnails and trash.
-    """
-    all_files = []
-    if not os.path.isdir(path):
-        return []
-
-    for root, dirs, files in os.walk(path):
-        # Remove thumbnail directories from traversal
-        dirs[:] = [d for d in dirs if d != THUMBNAIL_SUBFOLDER_NAME]
-
-        current_relative_root = os.path.relpath(root, image_library_root)
-        if current_relative_root == '.': # If root is the image_library_root itself
-            current_relative_root = ''
-        
-        # Exclude trash folder content from recursive scans for regular views
-        if TRASH_FOLDER_NAME in current_relative_root.split(os.sep):
-            continue
-
-        for file in files:
-            if file.lower().endswith(MEDIA_EXTENSIONS) and not file.endswith('.meta'):
-                # Construct the relative path from image_library_root
-                if current_relative_root:
-                    all_files.append(os.path.join(current_relative_root, file))
-                else:
-                    all_files.append(file)
-    return sorted(all_files)
+    files = get_all_media_recursive(month_path) # Now returns files as dicts
+    return jsonify(files)
 
 
 @app.route('/api/trash_content', methods=['GET'])
 def list_trash_content():
-    """Lists all files directly within the _Trash folder, including metadata."""
+    """
+    Lists all files directly within the _Trash folder, including their original paths and the total count.
+    Returns a list of dictionaries: [{"filename": "...", "relative_path_in_trash": "...", "original_path": "..."}, ...].
+    """
     if not os.path.isdir(TRASH_ROOT):
         return jsonify({"error": "Trash folder not found"}), 404
     try:
-        files_data = []
-        for item in os.listdir(TRASH_ROOT):
-            full_path = os.path.join(TRASH_ROOT, item)
-            if os.path.isfile(full_path) and item.lower().endswith(MEDIA_EXTENSIONS):
-                file_info = {
-                    "filename": item,
-                    "relative_path_in_trash": os.path.relpath(full_path, image_library_root),
-                    "thumbnail_path": os.path.relpath(full_path, image_library_root) # For trash, thumbnail is the trashed file itself
-                }
-                # Try to load metadata for original path
+        trashed_items = []
+        for f in os.listdir(TRASH_ROOT):
+            full_path = os.path.join(TRASH_ROOT, f)
+            if os.path.isfile(full_path) and f.lower().endswith(MEDIA_EXTENSIONS) and not f.endswith('.meta') and not f.startswith('.'):
                 metadata_path = f"{full_path}.meta"
+                original_path_from_meta = None # Use a distinct variable name
                 if os.path.exists(metadata_path):
                     try:
-                        with open(metadata_path, 'r') as f:
-                            metadata = json.load(f)
-                        file_info["original_path_from_metadata"] = metadata.get("original_relative_path")
-                        # If a thumbnail was moved to trash with the original, its original path is also in metadata
-                        file_info["original_thumbnail_relative_path_from_metadata"] = metadata.get("original_thumbnail_relative_path") # Changed key for clarity
-                    except Exception as e:
-                        print(f"Error reading metadata for {item} in trash: {e}")
-                        file_info["original_path_from_metadata"] = "Unknown Original Path"
-                files_data.append(file_info)
+                        with open(metadata_path, 'r') as meta_f:
+                            metadata = json.load(meta_f)
+                            original_path_from_meta = metadata.get("original_relative_path")
+                    except json.JSONDecodeError:
+                        print(f"Warning: Could not decode metadata for {f}")
+                
+                trashed_items.append({
+                    "filename": f,
+                    "relative_path_in_trash": os.path.join(TRASH_FOLDER_NAME, f), # Path used for deletion/restoration
+                    "original_path": original_path_from_meta # Client will now consistently use 'original_path'
+                })
         
         # Sort by filename
-        return jsonify({"files": sorted(files_data, key=lambda x: x['filename'].lower()), "count": len(files_data)})
+        trashed_items.sort(key=lambda x: x['filename'])
+        
+        # Read/update the trash folder's count
+        _update_folder_item_count_meta(TRASH_ROOT) # Ensure count is fresh
+        trash_count = _read_folder_item_count(TRASH_ROOT)
+        if trash_count is None: # Fallback if read fails after update
+            trash_count = len(trashed_items)
+
+
+        return jsonify({"files": trashed_items, "count": trash_count})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -464,7 +439,7 @@ def move_to_trash():
         
         # Security checks:
         # 1. Ensure the source file is within image_library_root (and not already in trash)
-        if not source_path.startswith(image_library_root) or TRASH_ROOT in source_path:
+        if not source_path.startswith(image_library_root) or TRASH_FOLDER_NAME in file_relative_path.split(os.sep):
             return jsonify({"error": "Attempted to move file from outside media root or from trash to trash"}), 403 # Forbidden
 
         # 2. Ensure the source is an actual file
@@ -487,44 +462,16 @@ def move_to_trash():
         # Move the actual media file
         shutil.move(source_path, destination_path)
 
-        # Handle thumbnail: if it exists, move it to trash too
-        original_thumbnail_full_path = get_thumbnail_full_path(source_path)
-        original_thumbnail_relative_path_in_trash = None # This will store the path of the thumbnail *in trash*
-        if os.path.isfile(original_thumbnail_full_path):
-            # Move the thumbnail to trash with a similar naming convention
-            thumb_base_name, thumb_ext = os.path.splitext(os.path.basename(original_thumbnail_full_path))
-            trashed_thumb_filename = f"{thumb_base_name}_thumb_{counter-1}{thumb_ext}" # Use same counter as original
-            trashed_thumb_destination_path = os.path.abspath(os.path.join(TRASH_ROOT, trashed_thumb_filename))
-            
-            # Ensure unique name for thumbnail in trash
-            thumb_counter_local = 0
-            temp_trashed_thumb_destination_path = trashed_thumb_destination_path
-            while os.path.exists(temp_trashed_thumb_destination_path):
-                temp_trashed_thumb_filename = f"{thumb_base_name}_thumb_{counter-1}_{thumb_counter_local}{thumb_ext}"
-                temp_trashed_thumb_destination_path = os.path.abspath(os.path.join(TRASH_ROOT, temp_trashed_thumb_filename))
-                thumb_counter_local += 1
-            
-            shutil.move(original_thumbnail_full_path, temp_trashed_thumb_destination_path)
-            original_thumbnail_relative_path_in_trash = os.path.relpath(temp_trashed_thumb_destination_path, image_library_root)
-            print(f"Moved thumbnail to trash as {trashed_thumb_filename}")
-            
-            # Clean up empty thumbnail directory if it becomes empty
-            thumb_dir = os.path.dirname(original_thumbnail_full_path)
-            if os.path.exists(thumb_dir) and not os.listdir(thumb_dir): # Check if directory exists before listing
-                os.rmdir(thumb_dir)
-                print(f"Removed empty thumbnail directory: {thumb_dir}")
-
         # Create metadata file
-        metadata = {
-            "original_relative_path": file_relative_path,
-            "trashed_filename": os.path.basename(destination_path) # Store the actual name it was trashed as
-        }
-        if original_thumbnail_relative_path_in_trash:
-            metadata["original_thumbnail_relative_path"] = original_thumbnail_relative_path_in_trash
-
+        metadata = {"original_relative_path": file_relative_path}
         metadata_path = f"{destination_path}.meta"
         with open(metadata_path, 'w') as f:
             json.dump(metadata, f)
+
+        # Update counts for affected folders
+        source_folder_path = os.path.dirname(source_path)
+        _update_folder_item_count_meta(source_folder_path) # Decrement source folder's count
+        _update_folder_item_count_meta(TRASH_ROOT) # Increment trash folder's count
 
         return jsonify({"message": f"File {file_relative_path} moved to trash as {trashed_filename} successfully"}), 200
 
@@ -557,29 +504,12 @@ def delete_file_forever():
         if not os.path.isfile(file_to_delete_path):
             return jsonify({"error": "File not found or is not a file"}), 404
 
-        # Read metadata to check for associated thumbnail in trash
-        associated_thumbnail_path_in_trash = None
-        if os.path.exists(metadata_path):
-            try:
-                with open(metadata_path, 'r') as f:
-                    metadata = json.load(f)
-                associated_thumbnail_path_in_trash = metadata.get("original_thumbnail_relative_path")
-            except Exception as e:
-                print(f"Warning: Could not read metadata for {file_relative_path} to find associated thumbnail: {e}")
-
         os.remove(file_to_delete_path) # Delete the media file
-        print(f"Permanently deleted: {file_to_delete_path}")
-
         if os.path.exists(metadata_path): # Delete the metadata file if it exists
             os.remove(metadata_path)
-            print(f"Deleted metadata: {metadata_path}")
         
-        # If an associated thumbnail was moved to trash, delete it too
-        if associated_thumbnail_path_in_trash:
-            full_associated_thumbnail_path = os.path.abspath(os.path.join(image_library_root, associated_thumbnail_path_in_trash))
-            if os.path.isfile(full_associated_thumbnail_path) and full_associated_thumbnail_path.startswith(TRASH_ROOT):
-                os.remove(full_associated_thumbnail_path)
-                print(f"Permanently deleted associated thumbnail: {full_associated_thumbnail_path}")
+        # Update count for the trash folder
+        _update_folder_item_count_meta(TRASH_ROOT) # Decrement trash folder's count
 
         return jsonify({"message": f"File {file_relative_path} permanently deleted successfully"}), 200
 
@@ -593,7 +523,7 @@ def restore_file():
     try:
         data = request.get_json(silent=True)
 
-        if data is None:
+        if data is None: # Corrected from 'data === None'
             return jsonify({"error": "Invalid or empty JSON body"}), 400
 
         trashed_file_relative_path = data.get('path') # e.g., "_Trash/trashed_image.jpg"
@@ -614,11 +544,10 @@ def restore_file():
         if not os.path.exists(metadata_path):
             return jsonify({"error": "Metadata for trashed file not found. Cannot restore original path."}), 404
 
-        # Read original path and original thumbnail path from metadata
+        # Read original path from metadata
         with open(metadata_path, 'r') as f:
             metadata = json.load(f)
         original_relative_path = metadata.get("original_relative_path")
-        original_thumbnail_relative_path_in_trash = metadata.get("original_thumbnail_relative_path") # Get the path of the thumbnail *in trash*
 
         if not original_relative_path:
             return jsonify({"error": "Original path not found in metadata. Cannot restore."}), 500
@@ -640,30 +569,15 @@ def restore_file():
             final_restore_path = os.path.abspath(os.path.join(image_library_root, final_restore_relative_path))
             print(f"Conflict at original path. Restoring to: {final_restore_relative_path}")
 
-        # Move the main file back
+
+        # Move the file back to its original location (or a new timestamped one)
         shutil.move(trashed_absolute_path, final_restore_path)
-        print(f"Restored file {trashed_absolute_path} to {final_restore_path}")
-
-        # Restore associated thumbnail if it exists in trash and its original path is known
-        if original_thumbnail_relative_path_in_trash:
-            trashed_thumbnail_full_path = os.path.abspath(os.path.join(image_library_root, original_thumbnail_relative_path_in_trash))
-            if os.path.isfile(trashed_thumbnail_full_path) and trashed_thumbnail_full_path.startswith(TRASH_ROOT):
-                # Calculate the original thumbnail destination path based on the *restored* original file's path
-                # This is crucial if the original file was restored to a new timestamped name
-                restored_original_relative_path = os.path.relpath(final_restore_path, image_library_root)
-                restored_original_full_path = final_restore_path # This is the absolute path of the restored original file
-                
-                # Get the expected thumbnail path for the *restored* original file
-                expected_restored_thumbnail_full_path = get_thumbnail_full_path(restored_original_full_path)
-                
-                # Ensure the thumbnail's destination directory exists
-                os.makedirs(os.path.dirname(expected_restored_thumbnail_full_path), exist_ok=True)
-                
-                # Move the thumbnail back
-                shutil.move(trashed_thumbnail_full_path, expected_restored_thumbnail_full_path)
-                print(f"Restored thumbnail {trashed_thumbnail_full_path} to {expected_restored_thumbnail_full_path}")
-
         os.remove(metadata_path) # Delete the metadata file after successful restoration
+
+        # Update counts for affected folders
+        _update_folder_item_count_meta(TRASH_ROOT) # Decrement trash folder's count
+        restore_destination_folder_path = os.path.dirname(final_restore_path)
+        _update_folder_item_count_meta(restore_destination_folder_path) # Increment destination folder's count
 
         return jsonify({"message": f"File {trashed_file_relative_path} restored to {original_relative_path} successfully."}), 200
 
@@ -671,44 +585,39 @@ def restore_file():
         print(f"An unexpected error occurred during file restoration: {e}")
         return jsonify({"error": str(e)}), 500
 
-
 # NEW: API endpoint to serve thumbnails
 @app.route('/api/thumbnail/<path:filename>')
 def serve_thumbnail(filename):
     """
-    Serves a thumbnail for the given filename.
-    Generates the thumbnail if it doesn't exist.
+    Generates and serves a thumbnail for the given media file.
+    'filename' is the relative path of the original file from image_library_root.
     """
-    original_full_path = os.path.abspath(os.path.join(image_library_root, filename))
-    
-    # Security check: Ensure the requested file is within image_library_root
-    if not original_full_path.startswith(image_library_root):
-        return "Forbidden", 403
+    original_file_path = os.path.abspath(os.path.join(image_library_root, filename))
 
-    # If it's a video, just serve the original video (no thumbnail generation for videos yet)
-    if filename.lower().endswith(VIDEO_EXTENSIONS):
-        if os.path.isfile(original_full_path):
-            return send_from_directory(os.path.dirname(original_full_path), os.path.basename(original_full_path))
-        else:
-            return "Video not found", 404
+    # Security check: Ensure the requested file is within the image_library_root
+    if not original_file_path.startswith(image_library_root):
+        abort(403) # Forbidden
 
-    # For images, handle thumbnail generation
-    if not os.path.isfile(original_full_path):
-        return "Image not found", 404
+    if not os.path.isfile(original_file_path):
+        abort(404) # Not found
 
-    thumbnail_full_path = get_thumbnail_full_path(original_full_path)
+    # If it's a video, we don't generate a thumbnail on the server-side for now.
+    # The client will use the video itself as a "thumbnail" or show a play icon.
+    file_extension = os.path.splitext(original_file_path)[1].lower()
+    if file_extension in VIDEO_EXTENSIONS:
+        return send_from_directory(image_library_root, filename)
 
-    # Check if thumbnail exists, if not, generate it
-    if not os.path.isfile(thumbnail_full_path):
-        print(f"Generating thumbnail for: {filename}")
-        success = generate_and_save_thumbnail(original_full_path, thumbnail_full_path)
-        if not success:
-            # If thumbnail generation fails, fall back to serving the original image
-            print(f"Failed to generate thumbnail for {filename}. Serving original image.")
-            return send_from_directory(os.path.dirname(original_full_path), os.path.basename(original_full_path))
+    # For images and RAW files, generate/retrieve thumbnail
+    thumbnail_path = _generate_thumbnail(original_file_path)
 
-    # Serve the thumbnail
-    return send_from_directory(os.path.dirname(thumbnail_full_path), os.path.basename(thumbnail_full_path))
+    if thumbnail_path and os.path.exists(thumbnail_path):
+        # Serve the generated thumbnail
+        thumbnail_directory = os.path.dirname(thumbnail_path)
+        thumbnail_basename = os.path.basename(thumbnail_path)
+        return send_from_directory(thumbnail_directory, thumbnail_basename)
+    else:
+        # If thumbnail generation failed or path is invalid, return 404
+        abort(404)
 
 
 # Serve static files (the HTML and actual images/videos)
@@ -739,5 +648,7 @@ def serve_index():
 
 
 if __name__ == '__main__':
+    # Perform initial scan and populate counts on server startup
+    _initial_scan_and_populate_counts()
     # You can change the port if 5000 is in use
     app.run(host='0.0.0.0', debug=True, port=8080)
