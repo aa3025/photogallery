@@ -6,6 +6,8 @@
     <title>Image/Video Folder Browser</title>
     <!-- Tailwind CSS CDN for easy styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
         /* Custom styles for better aesthetics */
         html, body {
@@ -39,10 +41,10 @@
                 max-width: 2000px !important; /* Force this max-width for screens 1536px and wider */
             }
         }
+        /* General nav-link base style */
         .nav-link {
-            display: inline-block;
-            padding: 0.6rem 1.2rem;
-            margin: 0.4rem;
+            padding: 0.4rem 0.8rem; /* Compact padding */
+            margin: 0.2rem; /* Compact margin */
             background-color: #4a5568; /* Darker grey for links */
             color: #e2e8f0; /* Light text for links */
             border-radius: 8px;
@@ -50,6 +52,10 @@
             font-weight: 600;
             transition: background-color 0.2s, transform 0.1s;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            display: inline-flex; /* Use inline-flex for horizontal alignment */
+            align-items: center; /* Vertically center content */
+            justify-content: center; /* Horizontally center content */
+            white-space: nowrap; /* Prevent wrapping within the nav-link itself */
         }
         .nav-link:hover {
             background-color: #6a768f; /* Lighter grey on hover */
@@ -61,6 +67,17 @@
             color: #fff;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
         }
+        /* New style for year, month, day, and trash buttons to stack content */
+        .folder-nav-button {
+            flex-direction: column; /* Stack text and count vertically */
+            min-width: 80px; /* Apply min-width only to these buttons */
+        }
+        /* Override item-count margin for these buttons to be on top */
+        .folder-nav-button .item-count {
+            margin-top: 0.1rem;
+            margin-left: 0; /* No left margin when stacked */
+        }
+
         .gallery-item {
             border-radius: 8px;
             overflow: hidden;
@@ -90,6 +107,19 @@
             margin-bottom: 1.5rem;
             font-size: 1rem;
             color: #a0aec0; /* Lighter grey for breadcrumb */
+            display: flex; /* Use flexbox for breadcrumb content */
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+            align-items: center; /* Align items vertically */
+            justify-content: space-between; /* Space between path and buttons */
+            gap: 1rem; /* Gap between breadcrumb path and buttons */
+        }
+        .breadcrumb-path-container {
+            display: flex;
+            align-items: center;
+            justify-content: center; /* Centered */
+            flex-grow: 1; /* Allow path to take available space */
+            flex-wrap: nowrap; /* Prevent wrapping */
+            flex-direction: row; /* Ensure horizontal layout for breadcrumbs */
         }
         /* Style for the breadcrumb separator */
         .breadcrumb-separator {
@@ -204,6 +234,7 @@
         .lightbox-nav-arrow.right {
             right: 10px;
         }
+        /* Lightbox Close Button (positioned absolutely within lightbox-overlay) */
         .lightbox-close {
             position: absolute;
             top: 15px;
@@ -267,75 +298,52 @@
             background-color: rgba(220, 38, 38, 1); /* Darker red on hover */
         }
 
-        /* Lightbox Delete Button (now an icon) */
-        .lightbox-delete-btn {
-            position: absolute;
-            top: 15px; /* Top right corner */
-            right: 65px; /* To the left of the close button */
-            transform: none; /* Remove previous transform */
-            background-color: rgba(220, 38, 38, 0.4); /* Semi-transparent red */
-            color: white;
-            width: 40px; /* Small square for icon */
-            height: 40px; /* Small square for icon */
-            border-radius: 50%; /* Make it round */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 1.5rem; /* For the icon size */
-            cursor: pointer;
-            z-index: 1010;
-            opacity: 0.7; /* Initial semi-transparency */
-            transition: opacity 0.2s ease, background-color 0.2s ease;
-            padding: 0; /* Remove padding */
-            border: none; /* Remove border */
-        }
-        .lightbox-overlay:hover .lightbox-delete-btn {
-            opacity: 1; /* Show on hover over the entire overlay */
-        }
-        .lightbox-delete-btn:hover {
-            background-color: rgba(220, 38, 38, 0.8); /* Darker red on hover */
-            opacity: 1;
-        }
-        /* Style for the SVG icon inside the button */
-        .lightbox-delete-btn svg {
-            width: 60%; /* Make SVG fill button */
-            height: 60%;
-        }
-
-        /* New style for Restore button in lightbox */
-        .lightbox-restore-btn {
-            position: absolute;
-            top: 15px; /* Align with delete button */
-            right: 115px; /* To the left of the delete button (65px + 40px width + 10px gap) */
-            transform: none; /* Remove previous transform */
-            background-color: rgba(52, 211, 153, 0.4); /* Greenish color, semi-transparent */
-            color: white;
+        /* Circular action button base style */
+        .circular-action-btn {
             width: 40px;
             height: 40px;
             border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 1.5rem; /* For the icon size */
             cursor: pointer;
             z-index: 1010;
             opacity: 0.7;
             transition: opacity 0.2s ease, background-color 0.2s ease;
             padding: 0;
             border: none;
+            color: #e2e8f0; /* Light text color for icons */
+            background-color: rgba(79, 70, 229, 0.4); /* Default blue background for slideshow */
+            box-shadow: none; /* No shadow */
         }
-        .lightbox-overlay:hover .lightbox-restore-btn {
+        .circular-action-btn:hover {
             opacity: 1;
-        }
-        .lightbox-restore-btn:hover {
-            background-color: rgba(16, 185, 129, 0.8); /* Darker green on hover */
-            opacity: 1;
-        }
-        /* Style for the UTF-8 icon inside the restore button */
-        .lightbox-restore-btn {
-            font-size: 1.8rem; /* Adjust font size for the UTF-8 symbol */
+            background-color: rgba(79, 70, 229, 0.8); /* Darker blue on hover */
         }
 
+        /* Specific styles for trash and restore buttons in breadcrumb */
+        #trashDeleteBtn {
+            background-color: rgba(220, 38, 38, 0.4); /* Red background */
+        }
+        #trashDeleteBtn:hover {
+            background-color: rgba(220, 38, 38, 0.8); /* Darker red on hover */
+        }
+        #trashRestoreBtn {
+            background-color: rgba(52, 211, 153, 0.4); /* Green background */
+        }
+        #trashRestoreBtn:hover {
+            background-color: rgba(16, 185, 129, 0.8); /* Darker green on hover */
+        }
+
+        /* Icon sizing for delete/restore */
+        #trashDeleteBtn .material-icons,
+        #trashRestoreBtn .material-icons {
+            font-size: 1.5rem; /* Adjusted to match Material Icons visual size */
+        }
+        /* Material Icons for Play/Pause buttons */
+        .circular-action-btn .material-icons {
+            font-size: 2.5rem; /* Larger font size for play/pause icons */
+        }
 
         /* Custom Confirmation Modal */
         .confirmation-modal-overlay {
@@ -403,12 +411,77 @@
             background-color: #6a768f; /* Lighter grey */
         }
 
-        /* New style for Trash button */
+        /* New style for Trash button in year navigation */
         .trash-nav-link {
             background-color: #6b7280; /* A darker grey, slightly different from regular nav-link */
         }
         .trash-nav-link:hover {
             background-color: #4b5563; /* Even darker on hover */
+        }
+
+        /* Slideshow fade-in effect */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Lightbox filename display */
+        #lightboxFilename {
+            position: absolute;
+            top: -40px; /* Moved up to be above the image */
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem; /* Small font size */
+            font-weight: 500;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+            z-index: 1010; /* Above media, below close/delete buttons */
+            max-width: calc(100% - 100px); /* Limit width to prevent overlap with buttons on both sides */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        /* Icon styling for play/pause buttons */
+        .play_icon, .pause_icon {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .material-icons {
+            font-family: 'Material Icons';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px; /* Default size for Material Icons */
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-feature-settings: 'liga';
+            -webkit-font-smoothing: antialiased;
+        }
+        /* Style for the item count text */
+        .item-count {
+            font-size: 0.7rem; /* Even smaller font size for count */
+            color: #a0aec0; /* Lighter grey for count text */
+            margin-top: 0.1rem; /* Even smaller margin above the count */
+            line-height: 1; /* Ensure minimal line height */
+        }
+
+        /* New CSS for fade-in effect on thumbnails */
+        .thumbnail-fade-in {
+            opacity: 0;
+            transition: opacity 0.5s ease-in;
+        }
+        .thumbnail-fade-in.loaded {
+            opacity: 1;
         }
     </style>
 </head>
@@ -417,8 +490,27 @@
         <h1 class="text-4xl font-extrabold text-center text-gray-300 mb-8">Image/Video Gallery Browser</h1>
 
         <div class="breadcrumb mb-6 text-center">
-            <a href="#" id="homeLink" class="nav-link">Home</a>
-            <span id="breadcrumbPath"></span>
+            <div class="breadcrumb-path-container">
+                <a href="#" id="homeLink" class="nav-link">Home</a>
+                <span id="breadcrumbPath"></span>
+            </div>
+            <!-- Action buttons container -->
+            <div id="actionButtonsContainer" class="flex flex-col items-end gap-2 ml-auto">
+                <!-- Slideshow button -->
+                <button id="slideshowBtn" class="circular-action-btn hidden" title="Start/Pause Slideshow">
+                    <i class="material-icons play_icon">play_circle_outline</i>
+                    <i class="material-icons pause_icon hidden">pause_circle_outline</i>
+                </button>
+
+                <!-- Delete button -->
+                <button id="trashDeleteBtn" class="circular-action-btn hidden" title="Move to Trash">
+                    <i class="material-icons">delete</i>
+                </button>
+                <!-- Restore button -->
+                <button id="trashRestoreBtn" class="circular-action-btn hidden" title="Restore File">
+                    <i class="material-icons">restore_from_trash</i>
+                </button>
+            </div>
         </div>
 
         <!-- Navigation Sections -->
@@ -456,22 +548,12 @@
     <div id="lightboxOverlay" class="lightbox-overlay">
         <span id="lightboxClose" class="lightbox-close">&times;</span>
         <div class="lightbox-content">
+            <span id="lightboxFilename"></span> <!-- New element for filename -->
             <span id="lightboxPrev" class="lightbox-nav-arrow left">&#11013;</span>
             <div id="lightboxMediaDisplay" class="media-display">
                 <!-- Image or Video will be loaded here -->
             </div>
             <span id="lightboxNext" class="lightbox-nav-arrow right">&#11157;</span>
-            <!-- Delete/Restore buttons will be dynamically added/removed here -->
-            <button id="lightboxDeleteBtn" class="lightbox-delete-btn">
-                <!-- SVG for Trash/Delete icon -->
-                <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zm2.46-7.12l1.41-1.41L12 12.59l2.12-2.12 1.41 1.41L13.41 14l2.12 2.12-1.41 1.41L12 15.41l-2.12 2.12-1.41-1.41L10.59 14l-2.13-2.12zM15.5 4l-1-1h-5l-1 1H5v2h14V4z"/>
-                </svg>
-            </button>
-            <button id="lightboxRestoreBtn" class="lightbox-restore-btn hidden">
-                <!-- UTF-8 for Recycle icon -->
-                &#9851;
-            </button>
         </div>
     </div>
 
@@ -489,16 +571,25 @@
 
     <script>
         // --- Configuration for Image Library Path ---
-        const imageLibraryBasePath = ''; // Set this to the base URL path where your media library is served.
         const TRASH_FOLDER_NAME = '_Trash'; // Keep this consistent with server.py
 
         let currentPath = []; // Stores the current navigation path (e.g., ['2023', '01', '01'])
-        let currentDisplayedMedia = []; // Stores the list of media (filenames) currently displayed in the gallery grid
-        let currentMediaFolderSegments = []; // Stores the path segments for the currently displayed media (e.g., ['2023'] or ['2023', '01'])
+        let currentDisplayedMedia = []; // Stores the list of media (full relative paths) currently displayed in the gallery grid or slideshow
         let currentMediaIndex = 0; // Stores the index of the currently viewed media in the lightbox
 
-        // Define video extensions for client-side check
-        const videoExtensions = ['.mp4', '.mov', '.webm', '.ogg', '.avi', '.mkv'];
+        // Slideshow variables
+        let slideshowInterval = null;
+        let isSlideshowRunning = false;
+        const slideshowDelay = 3000; // Changed to 3 seconds
+
+        // Define video extensions for client-side check (matching server.py)
+        const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.avif',
+                                  '.nef', '.nrw', '.cr2', '.cr3', '.crw', '.arw', '.srf', '.sr2',
+                                  '.orf', '.raf', '.rw2', '.raw', '.dng', '.kdc', '.dcr', '.erf',
+                                  '.3fr', '.mef', '.pef', '.x3f'];
+        const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.webm', '.ogg', '.avi', '.mkv'];
+        const MEDIA_EXTENSIONS = IMAGE_EXTENSIONS.concat(VIDEO_EXTENSIONS);
+
 
         const yearsContainer = document.getElementById('yearsContainer');
         const monthsContainer = document.getElementById('monthsContainer');
@@ -515,6 +606,11 @@
         const currentMediaFolderSpan = document.getElementById('currentMediaFolder');
         const breadcrumbPath = document.getElementById('breadcrumbPath');
         const homeLink = document.getElementById('homeLink');
+        
+        // Action buttons in the breadcrumb area
+        const slideshowBtn = document.getElementById('slideshowBtn'); 
+        const trashDeleteBtn = document.getElementById('trashDeleteBtn');
+        const trashRestoreBtn = document.getElementById('trashRestoreBtn');
 
         // Lightbox elements
         const lightboxOverlay = document.getElementById('lightboxOverlay');
@@ -522,8 +618,7 @@
         const lightboxPrev = document.getElementById('lightboxPrev');
         const lightboxNext = document.getElementById('lightboxNext');
         const lightboxClose = document.getElementById('lightboxClose');
-        const lightboxDeleteBtn = document.getElementById('lightboxDeleteBtn');
-        const lightboxRestoreBtn = document.getElementById('lightboxRestoreBtn'); // New restore button
+        const lightboxFilename = document.getElementById('lightboxFilename'); 
 
         // Confirmation Modal elements
         const confirmationModalOverlay = document.getElementById('confirmationModalOverlay');
@@ -532,15 +627,76 @@
         const confirmationMessage = document.getElementById('confirmationMessage');
 
         let fileToProcessPath = ''; // Stores the full relative path of the file to be moved/deleted/restored
-        let isPermanentDeleteAction = false; // Flag to determine action in confirmation modal
 
-        // Function to update the breadcrumb navigation
+        // Intersection Observer for lazy loading images
+        const lazyLoadObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const mediaElement = entry.target;
+                    // Check if it's an image or video and load the actual source
+                    if (mediaElement.tagName === 'IMG' && mediaElement.dataset.src) {
+                        mediaElement.src = mediaElement.dataset.src;
+                        mediaElement.onload = () => mediaElement.classList.add('loaded'); // Add 'loaded' class on image load
+                    } else if (mediaElement.tagName === 'VIDEO' && mediaElement.dataset.src) {
+                        mediaElement.src = mediaElement.dataset.src;
+                        mediaElement.load(); // For videos, call load() to start loading
+                        mediaElement.addEventListener('loadeddata', () => mediaElement.classList.add('loaded')); // Add 'loaded' class on video metadata load
+                    }
+                    observer.unobserve(mediaElement); // Stop observing once loaded
+                }
+            });
+        }, {
+            rootMargin: '0px 0px 100px 0px', // Load images 100px before they enter the viewport
+            threshold: 0.01 // Trigger when 1% of the element is visible
+        });
+
+        // Function to update the breadcrumb navigation and button visibility
         function updateBreadcrumb() {
             let pathHtml = '';
             currentPath.forEach((segment, index) => {
-                pathHtml += `<span class="breadcrumb-separator">&#11157;</span> <a href="#" data-path-index="${index}" class="nav-link">${segment}</a>`;
+                let displayContent = segment;
+                // If the segment is the trash folder, display the icon instead of text
+                if (segment === TRASH_FOLDER_NAME) {
+                    displayContent = '<i class="material-icons">delete</i>';
+                }
+                pathHtml += `<span class="breadcrumb-separator">&#11157;</span> <a href="#" data-path-index="${index}" class="nav-link">${displayContent}</a>`;
             });
             breadcrumbPath.innerHTML = pathHtml;
+            updateActionButtonsVisibility(); // Update visibility of action buttons
+        }
+
+        // Function to control visibility of action buttons in the breadcrumb area
+        function updateActionButtonsVisibility() {
+            const isViewingTrash = currentPath.includes(TRASH_FOLDER_NAME);
+            const isLightboxActive = lightboxOverlay.classList.contains('active');
+            const isViewingMediaFolder = currentPath.length >= 1; // Any path beyond home implies a media folder
+
+            // Slideshow button visibility
+            // Only show if viewing a media folder (not trash)
+            if (isViewingMediaFolder && !isViewingTrash) {
+                slideshowBtn.classList.remove('hidden');
+            } else {
+                slideshowBtn.classList.add('hidden');
+            }
+            updateSlideshowControls(); // Update slideshow icon based on state
+
+            // Trash/Delete button visibility
+            // Show if lightbox is active (regardless of whether it's trash or not)
+            if (isLightboxActive) {
+                trashDeleteBtn.classList.remove('hidden');
+                // Update tooltip based on whether it's trash or not
+                trashDeleteBtn.title = isViewingTrash ? 'Delete Permanently' : 'Move to Trash';
+            } else {
+                trashDeleteBtn.classList.add('hidden');
+            }
+
+            // Restore button visibility
+            // Only show if viewing trash AND lightbox is active
+            if (isViewingTrash && isLightboxActive) {
+                trashRestoreBtn.classList.remove('hidden');
+            } else {
+                trashRestoreBtn.classList.add('hidden');
+            }
         }
 
         // Event listener for breadcrumb clicks
@@ -549,12 +705,12 @@
                 const index = parseInt(event.target.dataset.pathIndex);
                 currentPath = currentPath.slice(0, index + 1);
                 if (currentPath.length === 1 && currentPath[0] === TRASH_FOLDER_NAME) {
-                    loadTrashContent(); // If clicked on trash in breadcrumb
-                } else if (currentPath.length === 1) { // Clicked on year
+                    loadTrashContent(); 
+                } else if (currentPath.length === 1) { 
                     loadMonths(currentPath[0]);
-                } else if (currentPath.length === 2) { // Clicked on month
+                } else if (currentPath.length === 2) { 
                     loadDays(currentPath[0], currentPath[1]);
-                } else if (currentPath.length === 0) { // Clicked on Home
+                } else if (currentPath.length === 0) { 
                     loadYears();
                 }
                 updateBreadcrumb();
@@ -576,81 +732,120 @@
 
         // Helper function to render media thumbnails in the gallery grid
         function displayMediaThumbnails(mediaFiles, pathSegments) {
-            currentDisplayedMedia = mediaFiles.sort();
-            currentMediaFolderSegments = pathSegments;
+            const isViewingTrash = pathSegments.includes(TRASH_FOLDER_NAME);
+            
+            // Filter out any null or undefined items before sorting
+            const filteredMediaFiles = mediaFiles.filter(item => item !== null && item !== undefined);
+
+            currentDisplayedMedia = filteredMediaFiles.sort((a, b) => {
+                // Sort by filename
+                let nameA = (a && typeof a === 'object' && a.filename) ? a.filename.toLowerCase() : '';
+                let nameB = (b && typeof b === 'object' && b.filename) ? b.filename.toLowerCase() : '';
+                return nameA.localeCompare(nameB);
+            });
+            currentPath = pathSegments; 
 
             galleryContainer.innerHTML = '';
 
-            const isViewingTrash = pathSegments.includes(TRASH_FOLDER_NAME);
+            // Disconnect observer before adding new elements to avoid observing old elements
+            lazyLoadObserver.disconnect();
 
             if (currentDisplayedMedia.length > 0) {
                 gallerySection.classList.remove('hidden');
-                currentDisplayedMedia.forEach((filename, index) => {
-                    const fileExtension = filename.split('.').pop().toLowerCase();
-                    const isVideo = videoExtensions.includes('.' + fileExtension);
+                currentDisplayedMedia.forEach((mediaItem, index) => {
+                    let fullRelativePathForOriginal; // This will be the path to the full-res original
+                    let thumbnailMediaUrl; // This will be the URL for the thumbnail
+                    let filename = mediaItem.filename; // Get filename from the object
 
-                    const base = imageLibraryBasePath.startsWith('/') ? imageLibraryBasePath : '/' + imageLibraryBasePath;
-                    const mediaPath = `${base.endsWith('/') ? base.slice(0, -1) : base}/${pathSegments.join('/')}/${filename}`;
-                    const fullRelativePath = `${pathSegments.join('/')}/${filename}`; // Store full relative path for deletion
-
-                    const galleryItem = document.createElement('div');
-                    galleryItem.classList.add('gallery-item', 'relative');
-                    galleryItem.dataset.index = index; // Store index for lightbox
-
-                    let mediaElement;
-                    if (isVideo) {
-                        mediaElement = document.createElement('video');
-                        mediaElement.src = mediaPath;
-                        mediaElement.preload = "metadata";
-                        const videoOverlay = document.createElement('div');
-                        videoOverlay.classList.add('video-thumbnail-overlay');
-                        galleryItem.appendChild(videoOverlay);
+                    if (isViewingTrash) {
+                        fullRelativePathForOriginal = mediaItem.relative_path_in_trash; // In trash, the trashed file is the "original" for viewing
+                        thumbnailMediaUrl = `/${fullRelativePathForOriginal}`; // For trash, we serve the trashed file itself as the thumbnail for now
                     } else {
-                        mediaElement = document.createElement('img');
-                        mediaElement.src = mediaPath;
-                    }
-
-                    mediaElement.alt = `Media from ${pathSegments.join('/')}`;
-                    mediaElement.title = filename;
-
-                    mediaElement.onerror = function() {
-                        this.onerror=null;
-                        this.src = `https://placehold.co/300x250/cccccc/333333?text=Unsupported+Format`;
-                        this.alt = `File not found: ${filename}`;
-                    };
-
-                    galleryItem.onclick = (e) => {
-                        // Prevent opening lightbox if delete button is clicked
-                        if (!e.target.classList.contains('delete-thumbnail-btn')) {
-                            openLightbox(index);
+                        fullRelativePathForOriginal = mediaItem.original_path; // This is the path to the full-res original
+                        const fileExtension = filename.split('.').pop().toLowerCase();
+                        // Use the /api/thumbnail endpoint for images, original path for videos
+                        if (IMAGE_EXTENSIONS.includes('.' + fileExtension)) {
+                            thumbnailMediaUrl = `/api/thumbnail/${fullRelativePathForOriginal}`;
+                        } else { // For videos, use the original path as its own thumbnail
+                            thumbnailMediaUrl = `/${fullRelativePathForOriginal}`;
                         }
-                    };
+                    }
+                    
+                    // Defensive check for filename before using split()
+                    if (typeof filename === 'string' && filename) { // Ensure filename is a non-empty string
+                        const fileExtension = filename.split('.').pop().toLowerCase();
+                        const isVideo = VIDEO_EXTENSIONS.includes('.' + fileExtension);
 
-                    const filenameOverlay = document.createElement('div');
-                    filenameOverlay.classList.add('absolute', 'bottom-0', 'left-0', 'right-0', 'bg-black', 'bg-opacity-50', 'text-white', 'text-sm', 'p-2', 'truncate', 'rounded-b-lg');
-                    filenameOverlay.textContent = filename;
+                        const galleryItem = document.createElement('div');
+                        galleryItem.classList.add('gallery-item', 'relative');
+                        galleryItem.dataset.index = index; 
 
-                    // Add delete button to thumbnail
-                    const deleteBtn = document.createElement('div');
-                    deleteBtn.classList.add('delete-thumbnail-btn');
-                    deleteBtn.innerHTML = '&times;'; // 'X' icon
-                    deleteBtn.title = isViewingTrash ? `Delete ${filename} Forever` : `Move ${filename} to Trash`;
-                    deleteBtn.onclick = (e) => {
-                        e.stopPropagation(); // Prevent gallery item click when delete button is clicked
-                        showConfirmationModal(fullRelativePath, isViewingTrash, false); // Pass isPermanentDeleteAction = true for trash view
-                    };
+                        let mediaElement;
+                        if (isVideo) {
+                            mediaElement = document.createElement('video');
+                            mediaElement.dataset.src = thumbnailMediaUrl; // Use data-src for lazy loading
+                            mediaElement.preload = "metadata";
+                            const videoOverlay = document.createElement('div');
+                            videoOverlay.classList.add('video-thumbnail-overlay');
+                            galleryItem.appendChild(videoOverlay);
+                        } else {
+                            mediaElement = document.createElement('img');
+                            mediaElement.dataset.src = thumbnailMediaUrl; // Use data-src for lazy loading
+                            mediaElement.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='; // Tiny transparent GIF placeholder
+                        }
 
-                    galleryItem.appendChild(mediaElement);
-                    galleryItem.appendChild(filenameOverlay);
-                    galleryItem.appendChild(deleteBtn); // Add delete button
-                    galleryContainer.appendChild(galleryItem);
+                        // Add classes for fade-in effect
+                        mediaElement.classList.add('thumbnail-fade-in');
+
+                        mediaElement.alt = `Media from ${pathSegments.join('/')}`;
+                        mediaElement.title = filename;
+
+                        mediaElement.onerror = function() {
+                            this.onerror=null;
+                            this.src = `https://placehold.co/300x250/cccccc/333333?text=Unsupported+Format`;
+                            this.alt = `File not found: ${filename}`;
+                            console.error(`Failed to load media: ${thumbnailMediaUrl}`); 
+                        };
+
+                        galleryItem.onclick = (e) => {
+                            if (!e.target.classList.contains('delete-thumbnail-btn')) {
+                                openLightbox(index);
+                            }
+                        };
+
+                        const filenameOverlay = document.createElement('div');
+                        filenameOverlay.classList.add('absolute', 'bottom-0', 'left-0', 'right-0', 'bg-black', 'bg-opacity-50', 'text-white', 'text-sm', 'p-2', 'truncate', 'rounded-b-lg');
+                        filenameOverlay.textContent = filename;
+
+                        const deleteBtn = document.createElement('div');
+                        deleteBtn.classList.add('delete-thumbnail-btn');
+                        deleteBtn.innerHTML = '<i class="material-icons">delete</i>';
+                        deleteBtn.title = isViewingTrash ? `Delete ${filename} Forever` : `Move ${filename} to Trash`;
+                        deleteBtn.onclick = (e) => {
+                            e.stopPropagation(); 
+                            // For trash items, pass the relative_path_in_trash for deletion
+                            // For regular items, pass the original_path for moving to trash
+                            const pathForAction = isViewingTrash ? mediaItem.relative_path_in_trash : mediaItem.original_path;
+                            showConfirmationModal(pathForAction, isViewingTrash, false); 
+                        };
+
+                        galleryItem.appendChild(mediaElement);
+                        galleryItem.appendChild(filenameOverlay);
+                        galleryItem.appendChild(deleteBtn); 
+                        galleryContainer.appendChild(galleryItem);
+
+                        // Observe the media element for lazy loading
+                        lazyLoadObserver.observe(mediaElement);
+                    } else {
+                        console.warn(`Skipping invalid media item: filename is not a valid string for mediaItem:`, mediaItem);
+                    }
                 });
             } else {
                 galleryContainer.innerHTML = '<p class="text-center text-gray-600 col-span-full">No media found in this folder.</p>';
                 gallerySection.classList.add('hidden');
             }
+            updateActionButtonsVisibility();
         }
-
 
         // 1. Load Years and Trash Button
         async function loadYears() {
@@ -658,7 +853,8 @@
             daysSection.classList.add('hidden');
             gallerySection.classList.add('hidden');
             yearsSection.classList.remove('hidden');
-
+            currentPath = []; 
+            
             yearsContainer.innerHTML = '';
             showLoading(yearsContainer);
             try {
@@ -667,21 +863,32 @@
                     const errorText = await response.text();
                     throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
                 }
-                const years = await response.json();
+                const yearsData = await response.json(); // Expecting array of {year: "YYYY", count: N}
 
-                yearsContainer.innerHTML = ''; // Clear loading message
-                if (years.length > 0) {
-                    years.sort((a, b) => parseInt(b) - parseInt(a)).forEach(year => {
+                yearsContainer.innerHTML = ''; 
+                if (yearsData.length > 0) {
+                    // Years are already sorted descending by server
+                    yearsData.forEach(yearItem => {
                         const link = document.createElement('a');
                         link.href = "#";
-                        link.textContent = year;
-                        link.classList.add('nav-link');
+                        link.classList.add('nav-link', 'folder-nav-button'); // Add folder-nav-button class
                         link.onclick = (e) => {
                             e.preventDefault();
-                            currentPath = [year];
-                            loadMonths(year);
+                            currentPath = [yearItem.year]; 
+                            loadMonths(yearItem.year);
                             updateBreadcrumb();
                         };
+                        
+                        const yearText = document.createElement('span');
+                        yearText.textContent = yearItem.year;
+                        link.appendChild(yearText);
+
+                        if (yearItem.count !== undefined && yearItem.count !== null) {
+                            const countText = document.createElement('span');
+                            countText.classList.add('item-count');
+                            countText.textContent = `(${yearItem.count} items)`;
+                            link.appendChild(countText);
+                        }
                         yearsContainer.appendChild(link);
                     });
                 } else {
@@ -691,20 +898,45 @@
                 // Add the Trash button as the last item
                 const trashLink = document.createElement('a');
                 trashLink.href = "#";
-                trashLink.innerHTML = `&#128465; Trash`; // UTF-8 trash bin symbol
-                trashLink.classList.add('nav-link', 'trash-nav-link'); // Apply custom trash style
+                trashLink.classList.add('nav-link', 'trash-nav-link', 'folder-nav-button'); // Add folder-nav-button class
                 trashLink.onclick = (e) => {
                     e.preventDefault();
-                    currentPath = [TRASH_FOLDER_NAME];
+                    currentPath = [TRASH_FOLDER_NAME]; 
                     loadTrashContent();
                     updateBreadcrumb();
                 };
+                
+                const trashIcon = document.createElement('i');
+                trashIcon.classList.add('material-icons');
+                trashIcon.textContent = 'delete';
+                trashLink.appendChild(trashIcon);
+
+                const trashText = document.createElement('span');
+                trashText.textContent = ''; // Removed "Trash" text
+                trashLink.appendChild(trashText);
+
+                // Fetch trash count separately for the button
+                try {
+                    const trashResponse = await fetch('/api/trash_content');
+                    if (trashResponse.ok) {
+                        const trashData = await trashResponse.json();
+                        if (trashData.count !== undefined && trashData.count !== null) {
+                            const trashCountText = document.createElement('span');
+                            trashCountText.classList.add('item-count');
+                            trashCountText.textContent = `(${trashData.count} items)`;
+                            trashLink.appendChild(trashCountText);
+                        }
+                    }
+                } catch (trashError) {
+                    console.error('Error fetching trash count for button:', trashError);
+                }
                 yearsContainer.appendChild(trashLink);
 
             } catch (error) {
                 console.error('Error fetching years:', error);
                 yearsContainer.innerHTML = '<p class="text-center text-red-600 col-span-full">Error loading years. Is the server running?</p>';
             }
+            updateActionButtonsVisibility();
         }
 
         // 2. Load Months for a given Year AND files within that year folder
@@ -715,6 +947,7 @@
             
             showLoading(monthsContainer);
             currentYearSpan.textContent = year;
+            currentPath = [year]; 
 
             try {
                 const response = await fetch(`/api/months/${year}`);
@@ -723,32 +956,41 @@
                     throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
                 }
                 const data = await response.json();
-                const months = data.months;
-                const files = data.files;
+                const monthsData = data.months; // Expecting array of {month: "MM", count: N}
+                const files = data.files; 
 
                 monthsContainer.innerHTML = '';
-                if (months.length > 0) {
-                    months.sort((a, b) => parseInt(a) - parseInt(b)).forEach(month => {
+                if (monthsData.length > 0) {
+                    // Months are already sorted numerically by server
+                    monthsData.forEach(monthItem => {
                         const link = document.createElement('a');
                         link.href = "#";
-                        link.textContent = month;
-                        link.classList.add('nav-link');
+                        link.classList.add('nav-link', 'folder-nav-button'); // Add folder-nav-button class
                         link.onclick = (e) => {
                             e.preventDefault();
-                            currentPath = [year, month];
-                            loadDays(year, month);
+                            currentPath = [year, monthItem.month]; 
+                            loadDays(year, monthItem.month);
                             updateBreadcrumb();
                         };
+                        const monthText = document.createElement('span');
+                        monthText.textContent = monthItem.month;
+                        link.appendChild(monthText);
+
+                        if (monthItem.count !== undefined && monthItem.count !== null) {
+                            const countText = document.createElement('span');
+                            countText.classList.add('item-count');
+                            countText.textContent = `(${monthItem.count} items)`;
+                            link.appendChild(countText);
+                        }
                         monthsContainer.appendChild(link);
                     });
                 } else {
                     monthsContainer.innerHTML = `<p class="text-center text-gray-600 col-span-full">No months found for ${year}.</p>`;
                 }
 
-                // Display files found directly in the year folder, and show/hide gallery section accordingly
                 if (files.length > 0) {
                     currentMediaFolderSpan.textContent = year;
-                    displayMediaThumbnails(files, [year]);
+                    displayMediaThumbnails(files, [year]); 
                 } else {
                     gallerySection.classList.add('hidden');
                     galleryContainer.innerHTML = '';
@@ -760,6 +1002,7 @@
                 gallerySection.classList.add('hidden');
                 galleryContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading media for ${year}.</p>`;
             }
+            updateActionButtonsVisibility();
         }
 
         // 3. Load Days for a given Year and Month AND files within that month folder
@@ -770,6 +1013,7 @@
             
             showLoading(daysContainer);
             currentMonthYearSpan.textContent = `${month}/${year}`;
+            currentPath = [year, month]; 
 
             try {
                 const response = await fetch(`/api/days/${year}/${month}`);
@@ -778,32 +1022,41 @@
                     throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
                 }
                 const data = await response.json();
-                const days = data.days;
-                const files = data.files;
+                const daysData = data.days; // Expecting array of {day: "DD", count: N}
+                const files = data.files; 
 
                 daysContainer.innerHTML = '';
-                if (days.length > 0) {
-                    days.sort((a, b) => parseInt(a) - parseInt(b)).forEach(day => {
+                if (daysData.length > 0) {
+                    // Days are already sorted numerically by server
+                    daysData.forEach(dayItem => {
                         const link = document.createElement('a');
                         link.href = "#";
-                        link.textContent = day;
-                        link.classList.add('nav-link');
+                        link.classList.add('nav-link', 'folder-nav-button'); // Add folder-nav-button class
                         link.onclick = (e) => {
                             e.preventDefault();
-                            currentPath = [year, month, day];
-                            loadPhotos(year, month, day);
+                            currentPath = [year, month, dayItem.day]; 
+                            loadPhotos(year, month, dayItem.day);
                             updateBreadcrumb();
                         };
+                        const dayText = document.createElement('span');
+                        dayText.textContent = dayItem.day;
+                        link.appendChild(dayText);
+
+                        if (dayItem.count !== undefined && dayItem.count !== null) {
+                            const countText = document.createElement('span');
+                            countText.classList.add('item-count');
+                            countText.textContent = `(${dayItem.count} items)`;
+                            link.appendChild(countText);
+                        }
                         daysContainer.appendChild(link);
                     });
                 } else {
                     daysContainer.innerHTML = `<p class="text-center text-gray-600 col-span-full">No days found for ${month}/${year}.</p>`;
                 }
 
-                // Display files found directly in the month folder, and show/hide gallery section accordingly
                 if (files.length > 0) {
                     currentMediaFolderSpan.textContent = `${month}/${year}`;
-                    displayMediaThumbnails(files, [year, month]);
+                    displayMediaThumbnails(files, [year, month]); 
                 } else {
                     gallerySection.classList.add('hidden');
                     galleryContainer.innerHTML = '';
@@ -815,6 +1068,7 @@
                 gallerySection.classList.add('hidden');
                 galleryContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading media for ${month}/${year}.</p>`;
             }
+            updateActionButtonsVisibility();
         }
 
         // 4. Load Photos/Videos for a given Year, Month, and Day
@@ -825,6 +1079,7 @@
             
             showLoading(galleryContainer);
             currentMediaFolderSpan.textContent = `${day}/${month}/${year}`;
+            currentPath = [year, month, day]; 
 
             try {
                 const response = await fetch(`/api/photos/${year}/${month}/${day}`);
@@ -832,11 +1087,11 @@
                     const errorText = await response.text();
                     throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
                 }
-                const files = await response.json();
+                const files = await response.json(); 
 
                 if (files.length > 0) {
                     gallerySection.classList.remove('hidden');
-                    displayMediaThumbnails(files, [year, month, day]);
+                    displayMediaThumbnails(files, [year, month, day]); 
                 } else {
                     gallerySection.classList.add('hidden');
                     galleryContainer.innerHTML = '';
@@ -847,17 +1102,28 @@
                 gallerySection.classList.add('hidden');
                 galleryContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading media for ${day}/${month}/${year}. Please check console for details.</p>`;
             }
+            updateActionButtonsVisibility();
         }
 
         // --- Lightbox Functions ---
 
         // Opens the lightbox with a specific image/video
         function openLightbox(index) {
+            // Ensure any running slideshow is stopped before opening lightbox manually
+            if (slideshowInterval) {
+                clearInterval(slideshowInterval);
+                slideshowInterval = null;
+                isSlideshowRunning = false;
+            }
+
             if (index >= 0 && index < currentDisplayedMedia.length) {
                 currentMediaIndex = index;
                 updateLightboxMedia();
                 lightboxOverlay.classList.add('active');
                 document.body.style.overflow = 'hidden';
+                
+                updateSlideshowControls(); // Ensure slideshow icon is correct
+                updateActionButtonsVisibility(); // Update visibility of action buttons when lightbox opens
             }
         }
 
@@ -865,13 +1131,30 @@
         function updateLightboxMedia() {
             lightboxMediaDisplay.innerHTML = '';
 
-            const filename = currentDisplayedMedia[currentMediaIndex];
-            const base = imageLibraryBasePath.startsWith('/') ? imageLibraryBasePath : '/' + imageLibraryBasePath;
-            const mediaPath = `${base.endsWith('/') ? base.slice(0, -1) : base}/${currentMediaFolderSegments.join('/')}/${filename}`;
-            fileToProcessPath = `${currentMediaFolderSegments.join('/')}/${filename}`; // Set file to move/delete/restore for lightbox buttons
+            const mediaItem = currentDisplayedMedia[currentMediaIndex];
+            const isViewingTrash = currentPath.includes(TRASH_FOLDER_NAME);
 
+            let mediaUrlForLightbox; // This will be the URL for the full-res media in lightbox
+            let filename = mediaItem.filename;
+            let displayPath;
+
+            if (isViewingTrash) {
+                fileToProcessPath = mediaItem.relative_path_in_trash; // Path used for delete/restore API calls
+                mediaUrlForLightbox = `/${fileToProcessPath}`; // In trash, the trashed file is the one to display
+                displayPath = `Trashed: ${filename}`;
+                if (mediaItem.original_path_from_metadata) { // Use the metadata field
+                    displayPath += ` (from: ${mediaItem.original_path_from_metadata})`;
+                }
+            } else {
+                fileToProcessPath = mediaItem.original_path; // This is the path to the full-res original
+                mediaUrlForLightbox = `/${fileToProcessPath}`; // Always load original for lightbox
+                displayPath = mediaItem.original_path.replace(/\//g, ' -> '); // Use original_path for display
+            }
+            
             const fileExtension = filename.split('.').pop().toLowerCase();
-            const isVideo = videoExtensions.includes('.' + fileExtension);
+            const isVideo = VIDEO_EXTENSIONS.includes('.' + fileExtension);
+
+            lightboxFilename.textContent = displayPath;
 
             let mediaElement;
             if (isVideo) {
@@ -881,34 +1164,24 @@
                 mediaElement.preload = "auto";
             } else {
                 mediaElement = document.createElement('img');
-                mediaElement.addEventListener('click', closeLightbox);
+                if (!isSlideshowRunning) {
+                    mediaElement.addEventListener('click', closeLightbox);
+                }
             }
 
-            mediaElement.src = mediaPath;
+            mediaElement.src = mediaUrlForLightbox; // Set the full-res URL here
             mediaElement.alt = `Full size media: ${filename}`;
             mediaElement.title = filename;
-            mediaElement.classList.add('media-display');
+            mediaElement.classList.add('media-display', 'fade-in'); 
 
             mediaElement.onerror = function() {
                 this.onerror = null;
                 this.src = `https://placehold.co/800x600/cccccc/333333?text=Unsupported+Format`;
-                this.alt = `File not found: ${filename}`;
+                this.alt = `File not found: ${mediaUrlForLightbox}`;
+                console.error(`Failed to load media in lightbox: ${mediaUrlForLightbox}`); 
             };
 
             lightboxMediaDisplay.appendChild(mediaElement);
-
-            // Conditional button visibility and tooltips for lightbox delete/restore buttons
-            const isViewingTrash = currentMediaFolderSegments.includes(TRASH_FOLDER_NAME);
-            if (isViewingTrash) {
-                lightboxDeleteBtn.classList.remove('hidden');
-                lightboxDeleteBtn.title = 'Delete Permanently'; // Tooltip for delete in trash
-                lightboxRestoreBtn.classList.remove('hidden');
-                lightboxRestoreBtn.title = 'Restore file'; // Tooltip for restore
-            } else {
-                lightboxDeleteBtn.classList.remove('hidden');
-                lightboxDeleteBtn.title = 'Move to Recycle Bin'; // Tooltip for move to trash
-                lightboxRestoreBtn.classList.add('hidden');
-            }
         }
 
         // Closes the lightbox
@@ -920,6 +1193,15 @@
                 videoInLightbox.pause();
                 videoInLightbox.currentTime = 0;
             }
+            // Stop slideshow if running
+            if (slideshowInterval) {
+                clearInterval(slideshowInterval);
+                slideshowInterval = null;
+            }
+            isSlideshowRunning = false;
+            updateSlideshowControls(); // Ensure controls are reset (visible)
+            lightboxFilename.textContent = ''; 
+            updateActionButtonsVisibility();
         }
 
         // Navigates to the next image/video in the lightbox
@@ -934,25 +1216,137 @@
             updateLightboxMedia();
         }
 
+        // --- Slideshow Functions ---
+        async function toggleSlideshow() {
+            if (isSlideshowRunning) {
+                clearInterval(slideshowInterval);
+                slideshowInterval = null;
+                isSlideshowRunning = false;
+                console.log('Slideshow paused.');
+            } else {
+                // Always fetch new media when starting a slideshow to ensure it's current
+                let apiUrl = '';
+                if (currentPath.length === 1) { // Year selected
+                    apiUrl = `/api/recursive_media/year/${currentPath[0]}`;
+                } else if (currentPath.length === 2) { // Month selected
+                    apiUrl = `/api/recursive_media/month/${currentPath[0]}/${currentPath[1]}`;
+                } else if (currentPath.length === 3) { // Day selected
+                    apiUrl = `/api/photos/${currentPath[0]}/${currentPath[1]}/${currentPath[2]}`;
+                } else {
+                    // This case should ideally not be reached if the button is hidden in trash and on home
+                    alert('Please select a year, month, or day to start a slideshow.');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(apiUrl);
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
+                    }
+                    const recursiveFiles = await response.json();
+
+                    if (recursiveFiles.length === 0) {
+                        alert('No media found for slideshow in this selection.');
+                        return;
+                    }
+
+                    currentDisplayedMedia = recursiveFiles.sort((a, b) => {
+                        // Sort by original_path for consistent slideshow order
+                        let pathA = a.original_path ? a.original_path.toLowerCase() : '';
+                        let pathB = b.original_path ? b.original_path.toLowerCase() : '';
+                        return pathA.localeCompare(pathB);
+                    });
+
+                    // If the lightbox is NOT currently active when slideshow is initiated,
+                    // reset currentMediaIndex to 0 to start from the beginning of the folder.
+                    // If the lightbox IS active, keep currentMediaIndex as is (it's already on the correct image).
+                    if (!lightboxOverlay.classList.contains('active')) {
+                        currentMediaIndex = 0;
+                    }
+
+                } catch (error) {
+                    console.error('Error fetching recursive media for slideshow:', error);
+                    alert(`Error starting slideshow: ${error.message}`);
+                    closeLightbox();
+                    return; 
+                }
+                
+                // Ensure lightbox is open and showing the correct image (either first image for new slideshow or current for resume)
+                openLightbox(currentMediaIndex); 
+
+                isSlideshowRunning = true;
+                slideshowInterval = setInterval(() => {
+                    showNextImage();
+                }, slideshowDelay);
+                console.log('Slideshow resumed/started.');
+            }
+            updateSlideshowControls(); 
+        }
+
+        // Updates the icons and tooltips for the slideshow button (now only in lightbox overlay)
+        function updateSlideshowControls() {
+            const playIcon = slideshowBtn.querySelector('.play_icon'); 
+            const pauseIcon = slideshowBtn.querySelector('.pause_icon'); 
+            
+            if (isSlideshowRunning) {
+                playIcon.classList.add('hidden');
+                pauseIcon.classList.remove('hidden');
+                slideshowBtn.title = 'Pause slideshow';
+            } else {
+                playIcon.classList.remove('hidden');
+                pauseIcon.classList.add('hidden');
+                slideshowBtn.title = 'Resume slideshow'; 
+            }
+
+            // Hide/show navigation arrows based on slideshow state (only affects lightbox arrows)
+            if (lightboxOverlay.classList.contains('active')) {
+                if (isSlideshowRunning) {
+                    lightboxPrev.style.opacity = '0';
+                    lightboxNext.style.opacity = '0';
+                    lightboxPrev.style.pointerEvents = 'none';
+                    lightboxNext.style.pointerEvents = 'none';
+                } else {
+                    lightboxPrev.style.opacity = '1';
+                    lightboxNext.style.opacity = '1';
+                    lightboxPrev.style.pointerEvents = 'auto';
+                    lightboxNext.style.pointerEvents = 'auto';
+                }
+            }
+        }
+
+
         // Event listeners for lightbox controls
         lightboxClose.addEventListener('click', closeLightbox);
         lightboxPrev.addEventListener('click', showPreviousImage);
         lightboxNext.addEventListener('click', showNextImage);
+        
+        // Event listener for the slideshow button (now in breadcrumb)
+        slideshowBtn.addEventListener('click', toggleSlideshow); 
 
-        // Lightbox Delete/Move to Trash button click
-        lightboxDeleteBtn.addEventListener('click', () => {
-            const isViewingTrash = currentMediaFolderSegments.includes(TRASH_FOLDER_NAME);
-            showConfirmationModal(fileToProcessPath, isViewingTrash, false); // isPermanentDeleteAction = true if in trash
+        // Event listeners for delete/restore buttons (now in breadcrumb)
+        trashDeleteBtn.addEventListener('click', () => {
+            const isViewingTrash = currentPath.includes(TRASH_FOLDER_NAME);
+            showConfirmationModal(fileToProcessPath, isViewingTrash, false); 
         });
 
-        // Lightbox Restore button click
-        lightboxRestoreBtn.addEventListener('click', () => {
-            showConfirmationModal(fileToProcessPath, false, true); // isRestoreAction = true
+        trashRestoreBtn.addEventListener('click', () => {
+            showConfirmationModal(fileToProcessPath, false, true); 
+        });
+
+        // Add click listener to lightbox media display for pause/resume
+        lightboxMediaDisplay.addEventListener('click', () => {
+            if (isSlideshowRunning) {
+                toggleSlideshow(); 
+            } else {
+                closeLightbox();
+            }
         });
 
 
         // Close lightbox when clicking outside the media (on the overlay itself)
         lightboxOverlay.addEventListener('click', (event) => {
+            // Only close if clicking on the overlay directly, not on children like media, arrows, buttons
             if (event.target === lightboxOverlay || event.target === lightboxClose) {
                 closeLightbox();
             }
@@ -963,9 +1357,9 @@
             if (lightboxOverlay.classList.contains('active')) {
                 if (event.key === 'Escape') {
                     closeLightbox();
-                } else if (event.key === 'ArrowRight') {
+                } else if (!isSlideshowRunning && event.key === 'ArrowRight') { 
                     showNextImage();
-                } else if (event.key === 'ArrowLeft') {
+                } else if (!isSlideshowRunning && event.key === 'ArrowLeft') { 
                     showPreviousImage();
                 }
             }
@@ -973,8 +1367,7 @@
 
         // --- Confirmation Modal Functions ---
         function showConfirmationModal(filePath, isPermanentDelete = false, isRestore = false) {
-            fileToProcessPath = filePath; // Set the file path to be processed
-            isPermanentDeleteAction = isPermanentDelete; // Store the action type
+            fileToProcessPath = filePath; 
 
             if (isRestore) {
                 confirmationMessage.textContent = "Are you sure you want to restore this file to its original location?";
@@ -994,32 +1387,30 @@
             }
 
             confirmationModalOverlay.classList.add('active');
-            document.body.style.overflow = 'hidden'; // Prevent scrolling
+            document.body.style.overflow = 'hidden'; 
         }
 
         function hideConfirmationModal() {
             confirmationModalOverlay.classList.remove('active');
-            document.body.style.overflow = ''; // Restore scrolling
+            document.body.style.overflow = ''; 
         }
 
         // Event listeners for confirmation modal buttons
         confirmActionBtn.addEventListener('click', async () => {
-            const pathBeingProcessed = fileToProcessPath; // Capture it here
+            const pathBeingProcessed = fileToProcessPath; 
             hideConfirmationModal();
-            closeLightbox(); // Close lightbox if open
+            closeLightbox(); 
 
-            const isViewingTrash = currentMediaFolderSegments.includes(TRASH_FOLDER_NAME);
+            const isViewingTrash = currentPath.includes(TRASH_FOLDER_NAME);
 
-            // Determine which action to take based on the stored flag and current view
-            if (confirmActionBtn.textContent === "Restore") { // Check button text for restore
+            if (confirmActionBtn.textContent === "Restore") { 
                 await restoreFile(pathBeingProcessed);
-            } else if (isViewingTrash && confirmActionBtn.textContent === "Delete Forever") { // Permanent delete from trash
+            } else if (isViewingTrash && confirmActionBtn.textContent === "Delete Forever") { 
                 await deleteFileForever(pathBeingProcessed);
-            } else { // Move to trash from regular view
+            } else { 
                 await moveFileToTrash(pathBeingProcessed);
             }
         });
-
 
         cancelActionBtn.addEventListener('click', hideConfirmationModal);
 
@@ -1039,24 +1430,36 @@
                     console.log('File moved to trash successfully.');
                     // Re-load the current folder to reflect the movement
                     if (currentPath.length === 1 && currentPath[0] === TRASH_FOLDER_NAME) {
-                        loadTrashContent(); // Reload trash if currently viewing it
-                    } else if (currentPath.length === 1) { // Year level
+                        loadTrashContent(); 
+                    } else if (currentPath.length === 1) { 
                         loadMonths(currentPath[0]);
-                    } else if (currentPath.length === 2) { // Month level
+                    } else if (currentPath.length === 2) { 
                         loadDays(currentPath[0], currentPath[1]);
-                    } else if (currentPath.length === 3) { // Day level
+                    } else if (currentPath.length === 3) { 
                         loadPhotos(currentPath[0], currentPath[1], currentPath[2]);
-                    } else { // Home/initial view
+                    } else { 
                         loadYears();
                     }
                 } else {
                     const errorData = await response.json();
                     console.error('Failed to move file to trash:', errorData.error);
-                    alert(`Error moving file to trash: ${errorData.error}`); // Use a simple alert for error feedback
+                    alert(`Error moving file to trash: ${errorData.error}`); 
                 }
             } catch (error) {
                 console.error('Network or unexpected error during file movement:', error);
-                alert(`An unexpected error occurred: ${error.message}`); // Use a simple alert for error feedback
+                alert(`An unexpected error occurred: ${error.message}`); 
+                // Ensure the UI is reloaded even on error to reflect potential partial changes
+                if (currentPath.length === 1 && currentPath[0] === TRASH_FOLDER_NAME) {
+                    loadTrashContent(); 
+                } else if (currentPath.length === 1) { 
+                    loadMonths(currentPath[0]);
+                } else if (currentPath.length === 2) { 
+                    loadDays(currentPath[0], currentPath[1]);
+                } else if (currentPath.length === 3) { 
+                    loadPhotos(currentPath[0], currentPath[1], currentPath[2]);
+                } else { 
+                    loadYears();
+                }
             }
         }
 
@@ -1074,16 +1477,17 @@
 
                 if (response.ok) {
                     console.log('File permanently deleted successfully.');
-                    // Always reload trash content after permanent deletion from trash view
                     loadTrashContent();
                 } else {
                     const errorData = await response.json();
                     console.error('Failed to permanently delete file:', errorData.error);
                     alert(`Error deleting file forever: ${errorData.error}`);
+                    loadTrashContent(); // Reload trash content on error
                 }
             } catch (error) {
                 console.error('Network or unexpected error during permanent deletion:', error);
                 alert(`An unexpected error occurred: ${error.message}`);
+                loadTrashContent(); // Reload trash content on error
             }
         }
 
@@ -1101,16 +1505,17 @@
 
                 if (response.ok) {
                     console.log('File restored successfully.');
-                    // Reload trash content after restoration
                     loadTrashContent();
                 } else {
                     const errorData = await response.json();
                     console.error('Failed to restore file:', errorData.error);
                     alert(`Error restoring file: ${errorData.error}`);
+                    loadTrashContent(); // Reload trash content on error
                 }
             } catch (error) {
                 console.error('Network or unexpected error during restoration:', error);
                 alert(`An unexpected error occurred: ${error.message}`);
+                loadTrashContent(); // Reload trash content on error
             }
         }
 
@@ -1120,10 +1525,11 @@
             yearsSection.classList.add('hidden');
             monthsSection.classList.add('hidden');
             daysSection.classList.add('hidden');
-            gallerySection.classList.remove('hidden'); // Ensure gallery is visible
+            gallerySection.classList.remove('hidden'); 
+            currentPath = [TRASH_FOLDER_NAME]; 
 
             showLoading(galleryContainer);
-            currentMediaFolderSpan.textContent = TRASH_FOLDER_NAME; // Set title for trash view
+            currentMediaFolderSpan.textContent = TRASH_FOLDER_NAME; 
 
             try {
                 const response = await fetch('/api/trash_content');
@@ -1131,15 +1537,15 @@
                     const errorText = await response.text();
                     throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
                 }
-                const files = await response.json();
-
-                // Display files in the gallery, using TRASH_FOLDER_NAME as the path segment
-                displayMediaThumbnails(files, [TRASH_FOLDER_NAME]);
+                // Expecting an object with 'files' and 'count' from server.py's list_trash_content
+                const trashData = await response.json(); 
+                displayMediaThumbnails(trashData.files, [TRASH_FOLDER_NAME]);
 
             } catch (error) {
                 console.error('Error fetching trash content:', error);
                 galleryContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading trash content: ${error.message}.</p>`;
             }
+            updateActionButtonsVisibility();
         }
 
 
