@@ -180,28 +180,27 @@
             opacity: 1;
             visibility: visible;
         }
-        .lightbox-content {
-            position: relative; /* Changed to relative for positioning inner elements */
+        /* Removed .lightbox-content class as it was redundant with #lightboxMediaDisplay */
+        /* .lightbox-content {
+            position: relative;
             max-width: 90vw;
             max-height: 90vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            /* Ensure lightbox content can grow */
             width: 100%;
             height: 100%;
-        }
+        } */
+
         /* The media-display class is now only applied to the actual img/video element */
         .media-display { /* Removed .lightbox-content prefix */
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain; /* Ensure media fits within the box */
+            max-width: 100%; /* Image/video will scale to 100% of its parent's width */
+            max-height: 100%; /* Image/video will scale to 100% of its parent's height */
+            object-fit: contain; /* Ensures media fits within the box while maintaining aspect ratio */
             border-radius: 8px;
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7); /* Stronger shadow for lightbox media */
             width: auto; /* Allow intrinsic width */
             height: auto; /* Allow intrinsic height */
-            max-width: 90vw; /* Constrain by viewport width */
-            max-height: 90vh; /* Constrain by viewport height */
         }
         /* Specific rule for video elements within media-display to ensure they fill space */
         .media-display video { /* Removed .lightbox-content prefix */
@@ -517,6 +516,50 @@
             align-items: center; /* Vertically align items */
             z-index: 500; /* Ensure it's above other breadcrumb content if needed */
         }
+
+        /* Loading spinner styles */
+        .loading-spinner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent background */
+            z-index: 999; /* Below media, above arrows */
+            border-radius: 8px;
+            transition: opacity 0.3s ease;
+        }
+        .loading-spinner .material-icons {
+            font-size: 4rem; /* Large icon */
+            color: #4f46e5; /* Blue color */
+            animation: spin 1.5s linear infinite; /* Spin animation */
+        }
+        .loading-spinner p {
+            margin-top: 1rem;
+            font-size: 1.2rem;
+            color: #cbd5e0;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* New styles for #lightboxMediaDisplay to ensure proper sizing */
+        #lightboxMediaDisplay {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative; /* Needed for spinner positioning */
+            /* Reduced max-width and max-height to create more consistent margins */
+            max-width: 90vw; /* Changed from 90vw */
+            max-height: 90vh; /* Changed from 90vh */
+        }
     </style>
 </head>
 <body>
@@ -600,6 +643,7 @@
         <span id="lightboxPrev" class="lightbox-nav-arrow left">&#11013;</span>
         <div id="lightboxMediaDisplay">
             <!-- Image or Video will be loaded here -->
+            <!-- Loading spinner will be inserted here dynamically -->
         </div>
         <span id="lightboxNext" class="lightbox-nav-arrow right">&#11157;</span>
     </div>
@@ -1163,6 +1207,24 @@
 
         // --- Lightbox Functions ---
 
+        // Helper function to show the loading spinner
+        function showLoadingSpinner() {
+            lightboxMediaDisplay.innerHTML = `
+                <div class="loading-spinner">
+                    <i class="material-icons">autorenew</i>
+                    <p>Converting for preview...</p>
+                </div>
+            `;
+        }
+
+        // Helper function to hide the loading spinner
+        function hideLoadingSpinner() {
+            const spinner = lightboxMediaDisplay.querySelector('.loading-spinner');
+            if (spinner) {
+                spinner.remove();
+            }
+        }
+
         // Opens the lightbox with a specific image/video
         function openLightbox(index) {
             // Ensure any running slideshow is stopped before opening lightbox manually
@@ -1193,7 +1255,7 @@
                 slideshowInterval = null;
             }
 
-            lightboxMediaDisplay.innerHTML = '';
+            lightboxMediaDisplay.innerHTML = ''; // Clear previous content
 
             const mediaItem = currentDisplayedMedia[currentMediaIndex];
             if (!mediaItem) {
@@ -1205,7 +1267,7 @@
             const isViewingTrash = currentPath.includes(TRASH_FOLDER_NAME);
             const fileExtension = mediaItem.filename.split('.').pop().toLowerCase();
             // Modified to include HEIC in the isRaw check for download button visibility
-            const isRaw = RAW_EXTENSIONS.includes('.' + fileExtension) || fileExtension === 'heic'; 
+            const isConvertible = RAW_EXTENSIONS.includes('.' + fileExtension) || fileExtension === 'heic'; 
 
             let mediaUrlForLightbox; 
             let filename = mediaItem.filename;
@@ -1240,11 +1302,24 @@
 
             lightboxFilename.textContent = displayPath;
 
+            // Show spinner if it's a convertible file type (RAW or HEIC) and not a video
+            if (isConvertible && !isVideo) {
+                showLoadingSpinner();
+            }
+
             let mediaElement;
             if (isVideo) {
                 mediaElement = document.createElement('video');
                 mediaElement.controls = true;
                 mediaElement.preload = "auto";
+                mediaElement.classList.add('media-display'); /* Add media-display class here */
+                mediaElement.addEventListener('loadeddata', () => {
+                    hideLoadingSpinner(); // Hide spinner when video data is loaded
+                    mediaElement.classList.add('fade-in');
+                });
+                mediaElement.addEventListener('error', () => {
+                    hideLoadingSpinner(); // Hide spinner on error
+                });
 
                 if (isSlideshowRunning) {
                     mediaElement.autoplay = true;
@@ -1253,6 +1328,15 @@
                 }
             } else {
                 mediaElement = document.createElement('img');
+                mediaElement.classList.add('media-display'); /* Add media-display class here */
+                mediaElement.addEventListener('load', () => {
+                    hideLoadingSpinner(); // Hide spinner when image is loaded
+                    mediaElement.classList.add('fade-in');
+                });
+                mediaElement.addEventListener('error', () => {
+                    hideLoadingSpinner(); // Hide spinner on error
+                });
+
                 if (isSlideshowRunning) {
                     // For images, set a timer to advance the slideshow
                     slideshowInterval = setInterval(showNextImage, slideshowDelay);
@@ -1262,7 +1346,7 @@
             mediaElement.src = mediaUrlForLightbox; 
             mediaElement.alt = `Full size media: ${filename}`;
             mediaElement.title = filename;
-            mediaElement.classList.add('media-display', 'fade-in'); 
+            // Removed mediaElement.classList.add('fade-in'); from here, moved to load/loadeddata listeners
 
             mediaElement.onerror = function() {
                 this.onerror = null;
@@ -1274,7 +1358,7 @@
             lightboxMediaDisplay.appendChild(mediaElement);
 
             // Control visibility of the download RAW button
-            if (isRaw && !isViewingTrash) { // Now includes HEIC files for download
+            if (isConvertible && !isViewingTrash) { // Now includes HEIC files for download
                 downloadRawBtn.classList.remove('hidden');
             } else {
                 downloadRawBtn.classList.add('hidden');
@@ -1297,6 +1381,7 @@
             isSlideshowRunning = false;
             updateSlideshowControls(); 
             lightboxFilename.textContent = ''; 
+            hideLoadingSpinner(); // Ensure spinner is hidden when closing lightbox
             updateActionButtonsVisibility();
         }
 
