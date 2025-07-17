@@ -2,7 +2,7 @@
 
 Web Photo Gallery is created using only two files (`index.html` and `server.py`) from underlying photo gallery file tree in the form ./YYYY/MM/DD  (year -> month -> day).
 
-It does not generate small size thumbnails instead of full-size images, hence putting thousands of images in one folder will run you out of RAM. Hence 3-layer folders' structure based in a date (./YYYY/MM/DD) is recommended.
+It does not generate small size thumbnails instead of full-size images, hence putting thousands of images in one folder will run you out of RAM. Therefore 3-layer folders' structure based on a calendar date (./YYYY/MM/DD) is recommended. Naming of image and video files is arbitrary, they should have recognisable file extensions.
 
 Quite a few graphics files' formats are supported including some RAW formats and video files (HEIC, MP4, MOV, AVIF etc), however this is mostly the web browser limitation
 (e.g. Windows MS Edge will not support apple HEIC, but Safari will, and hardly any browser will render RAW files)
