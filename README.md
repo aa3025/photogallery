@@ -12,9 +12,16 @@ On launch, the server.py will scan the folders' structure creating the list of f
 How to setup:
 1. Install flask: ``pip3 install Flask Flask-Cors``
 2. Save server.py and index.html in the same folder (it can be different from the Gallery folder with images/videos)
-3. Edit server.py and change the root directory of the Gallery, top of the server.py file, thi is where all images can be found; You can also change flask server port [default is :5000] (bottom of the file).
-4. Start the Flask server ``python3 server.py``, observe the output in the terminal to make sure all is fine and no errors produced.
-5. Navigate to http://127.0.0.1:5000 to see your Gallery.
+3. Edit server.py to change the top root directory of the Gallery, it is defined  in the beginning of the server.py file as
+
+  `image_library_root = os.path.abspath('/path/to/your/gallery/tree')`
+  
+  This is where all images will be found by python code. You can also change flask server port number [default is :5000] (defined in the bottom of the file).
+
+  `app.run(host='0.0.0.0', debug=True, port=5000)`
+  
+6. Start the Flask server ``python3 server.py``, observe the output in the terminal to make sure all is fine and no errors produced.
+7. Navigate to http://127.0.0.1:5000 to see your Gallery.
 
 Gallery supports browsing file structure folder-by-folder, deleting files (moving to recycle bin --> folder _Trash) and restoring the files from the Recycle Bin to the original location in the Gallery.
 
