@@ -5,7 +5,7 @@ import json   # Import json for reading/writing metadata
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS # Import CORS for cross-origin requests
 from datetime import datetime # For timestamping restored files if needed
-from PIL import Image, ExifTags # Import Pillow for image processing and ExifTags
+from PIL import Image, ExifTags, __version__ as pillow_version # Import Pillow for image processing, and get its version
 from pillow_heif import register_heif_opener # Import register_heif_opener
 import rawpy # NEW: Import rawpy for RAW file processing
 import numpy as np # NEW: Import numpy for array manipulation
@@ -32,6 +32,26 @@ TRASH_ROOT = os.path.join(image_library_root, TRASH_FOLDER_NAME)
 # Define the thumbnail subfolder name (hidden) and max dimension
 THUMBNAIL_SUBFOLDER_NAME = '.thumbnails'
 THUMBNAIL_MAX_DIMENSION = 480 # Max width/height for thumbnails
+
+# Determine the resampling filter based on Pillow version
+# Image.Resampling was introduced in Pillow 9.1.0
+try:
+    # Check if Pillow version is 9.1.0 or newer
+    if tuple(map(int, pillow_version.split('.'))) >= (9, 1, 0):
+        RESAMPLING_FILTER = Image.Resampling.LANCZOS
+    else:
+        RESAMPLING_FILTER = Image.LANCZOS
+    print(f"Using Pillow version {pillow_version} with resampling filter: {RESAMPLING_FILTER}")
+except AttributeError:
+    # Fallback for very old Pillow versions that might not even have Image.LANCZOS directly
+    # This scenario is less likely with modern installations but good to be robust.
+    RESAMPLING_FILTER = Image.LANCZOS
+    print(f"Pillow version {pillow_version} is old, using Image.LANCZOS as fallback.")
+except Exception as e:
+    # Catch any other potential errors during version check
+    RESAMPLING_FILTER = Image.LANCZOS
+    print(f"Error determining Pillow resampling filter: {e}. Defaulting to Image.LANCZOS.")
+
 
 # Ensure the image_library_root exists
 if not os.path.isdir(image_library_root):
@@ -152,8 +172,8 @@ def generate_and_save_thumbnail(original_full_path, thumbnail_full_path):
         if img.mode in ('RGBA', 'LA', 'P') or img.mode == 'L': # 'L' for grayscale
             img = img.convert('RGB')
         
-        # Calculate new size maintaining aspect ratio
-        img.thumbnail((THUMBNAIL_MAX_DIMENSION, THUMBNAIL_MAX_DIMENSION), Image.Resampling.LANCZOS)
+        # Calculate new size maintaining aspect ratio, using the determined RESAMPLING_FILTER
+        img.thumbnail((THUMBNAIL_MAX_DIMENSION, THUMBNAIL_MAX_DIMENSION), RESAMPLING_FILTER)
         
         # Save the thumbnail. Use JPEG for consistency and smaller file size,
         # unless original is GIF (which should remain GIF for animation).
