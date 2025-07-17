@@ -18,6 +18,8 @@ This project provides a simple, self-hosted web application to browse your local
 * **EXIF Orientation Correction:** Thumbnails are automatically rotated based on EXIF orientation data to display correctly.
 
 * **Cross-Platform (Python-based):** Designed to run on any system where Python and its dependencies can be installed (tested on macOS).
+  
+* Demo: http://143.47.246.212:8080 (NOT https:// !)
 
 ## Prerequisites
 
