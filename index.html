@@ -442,7 +442,7 @@
         /* Lightbox filename display */
         #lightboxFilename {
             position: absolute;
-            top: 20px; /* Moved up to be above the image */
+            top: 20px; /* Adjusted from -40px to 20px to make it visible */
             left: 50%;
             transform: translateX(-50%);
             color: rgba(255, 255, 255, 0.8);
@@ -581,6 +581,11 @@
                 <i class="material-icons pause_icon hidden">pause_circle_outline</i>
             </button>
 
+            <!-- Download RAW button for lightbox -->
+            <button id="downloadRawBtn" class="circular-action-btn" title="Download Original RAW" style="background-color: rgba(25, 118, 210, 0.4);">
+                <i class="material-icons">cloud_download</i>
+            </button>
+
             <!-- Delete button for lightbox -->
             <button id="trashDeleteBtn" class="circular-action-btn trash-delete-btn-style" title="Move to Trash">
                 <i class="material-icons">delete</i>
@@ -654,6 +659,7 @@
         const slideshowBtnLightbox = document.getElementById('slideshowBtnLightbox');
         const trashDeleteBtn = document.getElementById('trashDeleteBtn'); // This is now the single delete button in lightbox
         const trashRestoreBtn = document.getElementById('trashRestoreBtn'); // This is now the single restore button in lightbox
+        const downloadRawBtn = document.getElementById('downloadRawBtn'); // NEW: Download RAW button
 
         // Lightbox elements
         const lightboxOverlay = document.getElementById('lightboxOverlay');
@@ -712,7 +718,7 @@
         function updateActionButtonsVisibility() {
             const isViewingTrash = currentPath.includes(TRASH_FOLDER_NAME);
             const isLightboxActive = lightboxOverlay.classList.contains('active');
-            const isViewingMediaFolder = currentPath.length >= 1 && !isViewingTrash; // Any path beyond home implies a media folder, and not trash
+            const isViewingMediaFolder = currentPath.length >= 1 && !isViewingTrash;
 
             console.log(`[updateActionButtonsVisibility] isViewingTrash: ${isViewingTrash}, isLightboxActive: ${isLightboxActive}, isViewingMediaFolder: ${isViewingMediaFolder}`);
 
@@ -745,6 +751,7 @@
             } else {
                 trashRestoreBtn.classList.add('hidden');
             }
+            // Note: Download RAW button visibility is handled in updateLightboxMedia for precise control
         }
 
         // Event listener for breadcrumb clicks
@@ -808,7 +815,13 @@
 
                     if (isViewingTrash) {
                         fullRelativePathForOriginal = mediaItem.relative_path_in_trash; 
-                        thumbnailMediaUrl = `/${fullRelativePathForOriginal}`; 
+                        const fileExtension = filename.split('.').pop().toLowerCase();
+                        // For images and RAW files in trash, use the /api/thumbnail endpoint
+                        if (IMAGE_EXTENSIONS.includes('.' + fileExtension) || RAW_EXTENSIONS.includes('.' + fileExtension)) {
+                            thumbnailMediaUrl = `/api/thumbnail/${fullRelativePathForOriginal}`;
+                        } else { // For videos in trash, use the direct path
+                            thumbnailMediaUrl = `/${fullRelativePathForOriginal}`;
+                        }
                     } else {
                         fullRelativePathForOriginal = mediaItem.original_path; 
                         const fileExtension = filename.split('.').pop().toLowerCase();
@@ -1190,6 +1203,8 @@
             console.log(`[updateLightboxMedia] Current mediaItem:`, mediaItem);
 
             const isViewingTrash = currentPath.includes(TRASH_FOLDER_NAME);
+            const fileExtension = mediaItem.filename.split('.').pop().toLowerCase();
+            const isRaw = RAW_EXTENSIONS.includes('.' + fileExtension);
 
             let mediaUrlForLightbox; 
             let filename = mediaItem.filename;
@@ -1197,7 +1212,13 @@
 
             if (isViewingTrash) {
                 fileToProcessPath = mediaItem.relative_path_in_trash; 
-                mediaUrlForLightbox = `/${fileToProcessPath}`; 
+                const fileExtension = filename.split('.').pop().toLowerCase();
+                // For images and RAW files in trash, use the /api/media endpoint
+                if (IMAGE_EXTENSIONS.includes('.' + fileExtension) || RAW_EXTENSIONS.includes('.' + fileExtension)) {
+                    mediaUrlForLightbox = `/api/media/${fileToProcessPath}`;
+                } else { // For videos in trash, use the direct path
+                    mediaUrlForLightbox = `/${fileToProcessPath}`;
+                }
                 displayPath = `Trashed: ${filename}`;
                 // Use mediaItem.original_path for trash items
                 if (mediaItem.original_path) { 
@@ -1205,7 +1226,8 @@
                 }
             } else {
                 fileToProcessPath = mediaItem.original_path; 
-                mediaUrlForLightbox = `/${fileToProcessPath}`; 
+                // Use the new /api/media endpoint for all lightbox media, which handles RAW conversion
+                mediaUrlForLightbox = `/api/media/${fileToProcessPath}`; 
                 displayPath = mediaItem.original_path.replace(/\//g, ' -> '); 
             }
             
@@ -1213,7 +1235,6 @@
             console.log(`[updateLightboxMedia] mediaUrlForLightbox: ${mediaUrlForLightbox}`);
             console.log(`[updateLightboxMedia] displayPath for lightboxFilename: ${displayPath}`); // Added for debugging
 
-            const fileExtension = filename.split('.').pop().toLowerCase();
             const isVideo = VIDEO_EXTENSIONS.includes('.' + fileExtension);
 
             lightboxFilename.textContent = displayPath;
@@ -1250,6 +1271,13 @@
             };
 
             lightboxMediaDisplay.appendChild(mediaElement);
+
+            // Control visibility of the download RAW button
+            if (isRaw && !isViewingTrash) {
+                downloadRawBtn.classList.remove('hidden');
+            } else {
+                downloadRawBtn.classList.add('hidden');
+            }
         }
 
         // Closes the lightbox
@@ -1399,6 +1427,22 @@
 
         // Event listener for the slideshow button in the lightbox
         slideshowBtnLightbox.addEventListener('click', toggleSlideshow);
+
+        // Event listener for the new download RAW button
+        downloadRawBtn.addEventListener('click', () => {
+            const mediaItem = currentDisplayedMedia[currentMediaIndex];
+            if (mediaItem && mediaItem.original_path) {
+                const downloadUrl = `/api/download_original_raw/${mediaItem.original_path}`;
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = mediaItem.filename; // Suggests the original filename for download
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } else {
+                console.error("No media item selected or original path missing for download.");
+            }
+        });
 
         // Event listeners for delete/restore buttons (now in lightbox)
         trashDeleteBtn.addEventListener('click', () => {

@@ -35,6 +35,10 @@ COUNT_META_FILENAME = '_count.meta'
 THUMBNAIL_DIR_NAME = '.thumbnails' # Hidden directory for thumbnails
 THUMBNAIL_MAX_DIMENSION = 480 # Max width or height for thumbnails
 
+# Preview configuration (for full-size RAW conversions)
+PREVIEW_DIR_NAME = '.previews' # Hidden directory for full-size previews
+# PREVIEW_MAX_DIMENSION = 1920 # Removed as per request to serve full-size previews
+
 # Ensure the image_library_root exists
 if not os.path.isdir(image_library_root):
     print(f"Warning: Image library root '{image_library_root}' does not exist or is not a directory.")
@@ -73,8 +77,8 @@ def get_contents_structured(path):
     for item in os.listdir(path):
         full_path = os.path.join(path, item)
         # Exclude hidden files/directories (starting with '.')
-        # Also exclude metadata files (ending with .meta) and thumbnail directories
-        if item.startswith('.') or item.endswith('.meta') or item == THUMBNAIL_DIR_NAME:
+        # Also exclude metadata files (ending with .meta) and thumbnail/preview directories
+        if item.startswith('.') or item.endswith('.meta') or item == THUMBNAIL_DIR_NAME or item == PREVIEW_DIR_NAME:
             continue
         if os.path.isdir(full_path):
             directories.append(item)
@@ -114,8 +118,9 @@ def get_all_media_recursive(path):
         if TRASH_FOLDER_NAME in current_relative_root.split(os.sep):
             continue
 
-        # Exclude thumbnail directories from recursive scan
-        if THUMBNAIL_DIR_NAME in current_relative_root.split(os.sep):
+        # Exclude thumbnail and preview directories from recursive scan
+        if THUMBNAIL_DIR_NAME in current_relative_root.split(os.sep) or \
+           PREVIEW_DIR_NAME in current_relative_root.split(os.sep):
             continue
 
         for file in files:
@@ -140,8 +145,9 @@ def _get_recursive_media_count(path):
         if TRASH_FOLDER_NAME in os.path.relpath(root, image_library_root).split(os.sep) and root != TRASH_ROOT:
             continue
         
-        # Exclude thumbnail directories from recursive count
-        if THUMBNAIL_DIR_NAME in os.path.relpath(root, image_library_root).split(os.sep):
+        # Exclude thumbnail and preview directories from recursive count
+        if THUMBNAIL_DIR_NAME in os.path.relpath(root, image_library_root).split(os.sep) or \
+           PREVIEW_DIR_NAME in os.path.relpath(root, image_library_root).split(os.sep):
             continue
 
         for file in files:
@@ -266,6 +272,73 @@ def _generate_thumbnail(original_file_path):
     except Exception as e:
         print(f"Error generating thumbnail for {original_file_path}: {e}")
         # Return a placeholder or indicate failure
+        return None
+
+# NEW: Helper function to ensure preview directory exists for a given original file path
+def _ensure_preview_dir_exists(original_file_path):
+    """Ensures the .previews directory exists for a given original file path."""
+    preview_dir = os.path.join(os.path.dirname(original_file_path), PREVIEW_DIR_NAME)
+    os.makedirs(preview_dir, exist_ok=True)
+    return preview_dir
+
+# NEW: Helper function to generate and save a full-size preview (for lightbox)
+def _generate_preview(original_file_path):
+    """
+    Generates a full-size preview for an image or RAW file and saves it.
+    Returns the path to the generated preview.
+    """
+    # Determine the preview file path
+    preview_dir = _ensure_preview_dir_exists(original_file_path)
+    base_filename = os.path.basename(original_file_path)
+    preview_filename = f"{os.path.splitext(base_filename)[0]}.webp" # Use webp for efficiency
+    preview_path = os.path.join(preview_dir, preview_filename)
+
+    # Check if preview already exists and is up-to-date
+    if os.path.exists(preview_path) and os.path.getmtime(preview_path) >= os.path.getmtime(original_file_path):
+        return preview_path # Preview is current, no need to regenerate
+
+    print(f"Generating preview for: {original_file_path}")
+    try:
+        file_extension = os.path.splitext(original_file_path)[1].lower()
+
+        if file_extension in RAW_EXTENSIONS:
+            # Use rawpy for RAW images
+            with rawpy.imread(original_file_path) as raw:
+                # Postprocess to get a high-quality RGB image
+                rgb = raw.postprocess(use_camera_wb=True, no_auto_bright=True, output_bps=8, gamma=(2.222, 4.5))
+                image = Image.fromarray(rgb)
+        else:
+            # Use Pillow for standard image formats
+            image = Image.open(original_file_path)
+
+        # Apply EXIF orientation
+        try:
+            if hasattr(image, '_getexif'):
+                exif = image._getexif()
+                if exif:
+                    for orientation_tag in ExifTags.TAGS.keys():
+                        if ExifTags.TAGS[orientation_tag] == 'Orientation':
+                            break
+                    
+                    orientation = exif.get(orientation_tag)
+                    if orientation == 3:
+                        image = image.rotate(180, expand=True)
+                    elif orientation == 6:
+                        image = image.rotate(270, expand=True)
+                    elif orientation == 8:
+                        image = image.rotate(90, expand=True)
+        except Exception as e:
+            print(f"Error applying EXIF orientation for {original_file_path}: {e}")
+
+        # Removed image.thumbnail() to serve full-size previews as requested
+        
+        # Save the preview in WEBP format
+        image.save(preview_path, "WEBP", quality=85) # Use a higher quality for previews
+        return preview_path
+
+    except Exception as e:
+        print(f"Error generating preview for {original_file_path}: {e}")
+        # Return None to indicate failure, client can show placeholder
         return None
 
 
@@ -523,7 +596,7 @@ def restore_file():
     try:
         data = request.get_json(silent=True)
 
-        if data is None: # Corrected from 'data === None'
+        if data is None:
             return jsonify({"error": "Invalid or empty JSON body"}), 400
 
         trashed_file_relative_path = data.get('path') # e.g., "_Trash/trashed_image.jpg"
@@ -585,7 +658,7 @@ def restore_file():
         print(f"An unexpected error occurred during file restoration: {e}")
         return jsonify({"error": str(e)}), 500
 
-# NEW: API endpoint to serve thumbnails
+# API endpoint to serve thumbnails
 @app.route('/api/thumbnail/<path:filename>')
 def serve_thumbnail(filename):
     """
@@ -605,6 +678,7 @@ def serve_thumbnail(filename):
     # The client will use the video itself as a "thumbnail" or show a play icon.
     file_extension = os.path.splitext(original_file_path)[1].lower()
     if file_extension in VIDEO_EXTENSIONS:
+        # For videos, serve the original file directly as its thumbnail
         return send_from_directory(image_library_root, filename)
 
     # For images and RAW files, generate/retrieve thumbnail
@@ -618,6 +692,65 @@ def serve_thumbnail(filename):
     else:
         # If thumbnail generation failed or path is invalid, return 404
         abort(404)
+
+# NEW: API endpoint to serve full-size media for lightbox (handling RAW conversions)
+@app.route('/api/media/<path:filename>')
+def serve_media_for_lightbox(filename):
+    """
+    Serves full-size media for the lightbox.
+    Generates JPG/WebP previews for RAW files on demand.
+    'filename' is the relative path of the original file from image_library_root.
+    """
+    original_file_path = os.path.abspath(os.path.join(image_library_root, filename))
+
+    # Security check: Ensure the requested file is within the image_library_root
+    if not original_file_path.startswith(image_library_root):
+        abort(403) # Forbidden
+
+    if not os.path.isfile(original_file_path):
+        abort(404) # Not found
+
+    file_extension = os.path.splitext(original_file_path)[1].lower()
+
+    if file_extension in RAW_EXTENSIONS:
+        # For RAW files, generate/retrieve a full-size preview
+        preview_path = _generate_preview(original_file_path)
+        if preview_path and os.path.exists(preview_path):
+            # Serve the generated preview
+            preview_directory = os.path.dirname(preview_path)
+            preview_basename = os.path.basename(preview_path)
+            return send_from_directory(preview_directory, preview_basename)
+        else:
+            # If preview generation failed, return 404
+            abort(404)
+    else:
+        # For all other media types (JPG, PNG, GIF, MP4, MOV, etc.), serve the original file directly
+        return send_from_directory(image_library_root, filename)
+
+# NEW: API endpoint to serve original RAW files for download
+@app.route('/api/download_original_raw/<path:filename>')
+def download_original_raw(filename):
+    """
+    Serves the original RAW file for download.
+    'filename' is the relative path of the original RAW file from image_library_root.
+    """
+    original_file_path = os.path.abspath(os.path.join(image_library_root, filename))
+
+    # Security check: Ensure the requested file is within the image_library_root
+    if not original_file_path.startswith(image_library_root):
+        abort(403) # Forbidden
+
+    if not os.path.isfile(original_file_path):
+        abort(404) # Not found
+
+    file_extension = os.path.splitext(original_file_path)[1].lower()
+    if file_extension not in RAW_EXTENSIONS:
+        return jsonify({"error": "File is not a RAW image and cannot be downloaded via this endpoint."}), 400
+
+    # Serve the original RAW file for download
+    # as_attachment=True will force download instead of display in browser
+    # download_name can be specified to ensure the original filename is used
+    return send_from_directory(os.path.dirname(original_file_path), os.path.basename(original_file_path), as_attachment=True, download_name=os.path.basename(original_file_path))
 
 
 # Serve static files (the HTML and actual images/videos)
@@ -652,3 +785,4 @@ if __name__ == '__main__':
     _initial_scan_and_populate_counts()
     # You can change the port if 5000 is in use
     app.run(host='0.0.0.0', debug=True, port=8080)
+
