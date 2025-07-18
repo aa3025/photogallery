@@ -8,9 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Material Icons -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Corinthia:wght@400;700&display=swap" rel="stylesheet">
-
-
+    <!-- Google Font: Corinthia for elegant handwritten style -->
+    <link href="https://fonts.googleapis.com/css2?family=Corinthia:wght@400;700&display=swap" rel="stylesheet">
     <style>
         /* Custom styles for better aesthetics */
         html, body {
@@ -26,12 +25,12 @@
             padding: 1rem; /* Add padding to body, which will be the margin for the container */
         }
 
-   h1 {
-    font-family: 'Corinthia', sans-serif; /* Change this line */
-    font-weight: 500;
-    font-size: 4rem !important;
-    transition: color 0.3s ease;
-}
+        h1 {
+            font-family: 'Corinthia', cursive; /* Corrected to Corinthia */
+            font-weight: 500; /* Corrected font weight */
+            font-size: 4rem !important; /* Corrected font size */
+            transition: color 0.3s ease;
+        }
 
         /* Default Dark Theme */
         body[data-theme='dark'] {
@@ -39,8 +38,8 @@
             color: #e2e8f0; /* Light text color for contrast */
         }
         
-        body[data-theme='light'] h1 {
-            color: #1a202c; /* Darker color for light theme */
+        body[data-theme='dark'] h1 {
+            color: #e2e8f0; /* Light color for dark theme */
         }
 
         .container {
@@ -52,7 +51,7 @@
             flex-grow: 1; /* Allow container to grow and fill available space within body */
             display: flex; /* Use flexbox for internal layout */
             flex-direction: column; /* Stack internal content vertically */
-            position: relative; /* Added to make absolute positioning of children relative to it */
+            position: relative; /* Added to make absolute positioning of its child */
             transition: background-color 0.3s ease, box-shadow 0.3s ease;
         }
         /* Container Dark Theme */
@@ -98,14 +97,100 @@
         }
         /* New style for year, month, day, and trash buttons to stack content */
         .folder-nav-button {
-            flex-direction: column; /* Stack text and count vertically */
+            flex-direction: column; /* Stack icon/name and count vertically */
             min-width: 80px; /* Apply min-width only to these buttons */
+            position: relative; /* For delete button positioning */
+            height: auto; /* Allow height to adjust */
+            padding-top: 0.5rem; /* Adjust padding to accommodate the new layout */
+            padding-bottom: 0.5rem;
+            
+            /* NEW: Remove background/shadow for folder-nav-button */
+            background-color: transparent;
+            box-shadow: none;
         }
+        /* Dark theme adjustment for folder-nav-button */
+        body[data-theme='dark'] .folder-nav-button {
+            background-color: transparent;
+            box-shadow: none;
+        }
+        body[data-theme='light'] .folder-nav-button {
+            background-color: transparent;
+            box-shadow: none;
+        }
+
         /* Override item-count margin for these buttons to be on top */
         .folder-nav-button .item-count {
             margin-top: 0.1rem;
             margin-left: 0; /* No left margin when stacked */
         }
+        /* Style for the folder icon within the folder-nav-button */
+        /* .folder-nav-button .material-icons.folder-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.2rem;
+        } */
+
+        /* New wrapper for icon and name to allow text overlay */
+        .folder-icon-wrapper {
+            position: relative; /* For absolute positioning of text */
+            display: flex; /* To center the icon itself */
+            justify-content: center;
+            align-items: center;
+            width: 100%; /* Take full width of parent */
+            height: 4rem; /* Fixed height for the icon area */
+            margin-bottom: 0.2rem; /* Space between icon area and count */
+        }
+
+        /* Make the actual Material Icon larger to serve as background */
+        .folder-nav-button .material-icons.folder-icon {
+            font-size: 4.8rem; /* MODIFIED: Larger size for the folder icon (+20%) */
+            color: rgba(156, 163, 175, 0.7); /* Greyish color for the folder icon */
+            transition: color 0.2s ease;
+        }
+        /* Dark theme adjustment for folder icon color */
+        body[data-theme='dark'] .folder-nav-button .material-icons.folder-icon {
+            color: rgba(107, 114, 128, 0.7); /* Darker grey for dark theme */
+        }
+        /* Hover effect on folder icon */
+        body[data-theme='light'] .folder-nav-button:hover .material-icons.folder-icon {
+            color: rgba(79, 70, 229, 0.8); /* Indigo on hover for light theme */
+        }
+        body[data-theme='dark'] .folder-nav-button:hover .material-icons.folder-icon {
+            color: rgba(79, 70, 229, 0.8); /* Indigo on hover for dark theme */
+        }
+
+        /* Text overlay for folder name */
+        .folder-name-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.8rem; /* Smaller font for the name inside */
+            font-weight: 600; /* Make it bold for readability */
+            color: #fff; /* White text for contrast over dark icon */
+            white-space: nowrap; /* Prevent wrapping */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 80%; /* Limit width to prevent overflow */
+            text-align: center;
+            pointer-events: none; /* Allow clicks to pass through to the link */
+            transition: color 0.2s ease;
+        }
+        /* Dark theme adjustment for folder name overlay */
+        body[data-theme='dark'] .folder-name-overlay {
+            color: #e2e8f0; /* Lighter color for dark theme */
+        }
+        body[data-theme='light'] .folder-name-overlay {
+            color: #2d3748; /* Darker color for light theme */
+        }
+
+        /* Adjust item-count font size */
+        .item-count {
+            font-size: 0.65rem; /* Slightly smaller font size for count */
+            margin-top: 0.1rem;
+            line-height: 1;
+            transition: color 0.3s ease;
+        }
+
 
         .gallery-item {
             border-radius: 8px;
@@ -145,7 +230,7 @@
             display: flex; /* Use flexbox for breadcrumb content */
             flex-wrap: wrap; /* Allow wrapping on smaller screens */
             align-items: center; /* Align items vertically */
-            justify-content: space-between; /* Space between path and buttons */
+            justify-content: center; /* Changed from space-between to center */
             gap: 1rem; /* Gap between breadcrumb path and buttons */
             position: relative; /* Added for absolute positioning of its child */
             transition: color 0.3s ease;
@@ -154,20 +239,14 @@
         body[data-theme='dark'] .breadcrumb {
             color: #a0aec0; /* Lighter grey for breadcrumb */
         }
-        .breadcrumb-path-container {
-            display: flex;
-            align-items: center;
-            justify-content: center; /* Centered */
-            flex-grow: 1; /* Allow path to take available space */
-            flex-wrap: nowrap; /* Prevent wrapping */
-            flex-direction: row; /* Ensure horizontal layout for breadcrumbs */
-        }
+        /* Removed .breadcrumb-path-container as it's now breadcrumbPathContent */
         /* Style for the breadcrumb separator */
         .breadcrumb-separator {
-            margin: 0 0.2rem; /* Space around the separator */
+            margin: 0 0.5rem; /* Adjust margin */
             font-weight: normal; /* Ensure it's not bold */
-            font-size: 1rem; /* Made arrows 2x bigger */
+            font-size: 1.5rem; /* Make arrows larger to match new button size */
             transition: color 0.3s ease;
+            vertical-align: middle; /* Align with middle of the new buttons */
         }
         /* Breadcrumb-separator Dark Theme */
         body[data-theme='dark'] .breadcrumb-separator {
@@ -195,12 +274,15 @@
         } */
 
         /* Ensure sections can grow within the flex container */
-        #yearsSection,
-        #monthsSection,
-        #daysSection,
+        #topLevelFoldersSection,
+        #subFoldersSection,
         #gallerySection {
             flex-grow: 1; /* Allow these sections to grow and fill available space */
-            /* Removed display: flex; and flex-direction: column; */
+        }
+        
+        /* MODIFIED: Add alignment to folder containers */
+        #topLevelFoldersContainer, #subFoldersContainer {
+            align-items: center;
         }
 
         /* Lightbox/Modal Styles */
@@ -210,6 +292,7 @@
             left: 0;
             width: 100%;
             height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -391,6 +474,24 @@
             background-color: rgba(79, 70, 229, 0.8); /* Darker blue on hover */
         }
 
+        /* MODIFIED: Specific style for the home button in breadcrumbs to match height */
+        .home-breadcrumb-btn {
+            width: 40px !important;
+            height: 40px !important;
+            padding: 0 !important;
+            font-size: 1.2rem;
+            background-color: transparent !important;
+            box-shadow: none !important;
+        }
+        /* Adjust icon size within this button */
+        .home-breadcrumb-btn .material-icons {
+            font-size: 2rem;
+            line-height: 1;
+        }
+        .home-breadcrumb-btn .folder-name-overlay {
+            display: none;
+        }
+
         /* Specific styles for trash and restore buttons */
         .trash-delete-btn-style {
             background-color: rgba(220, 38, 38, 0.4); /* Red background */
@@ -449,6 +550,11 @@
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
             color: #e2e8f0;
         }
+        body[data-theme='light'] .confirmation-modal-content {
+            background-color: #ffffff;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            color: #2d3748;
+        }
         .confirmation-modal-content h3 {
             font-size: 1.5rem;
             margin-bottom: 1rem;
@@ -503,6 +609,11 @@
         }
         body[data-theme='dark'] .trash-nav-link:hover {
             background-color: #4b5563; /* Even darker on hover */
+        }
+        
+        /* MODIFIED: Hide the text overlay for the trash folder icon */
+        .trash-nav-link .folder-name-overlay {
+            display: none;
         }
 
         /* Slideshow fade-in effect */
@@ -568,14 +679,14 @@
         }
         /* Style for the item count text */
         .item-count {
-            font-size: 0.7rem; /* Even smaller font size for count */
+            font-size: 0.65rem; /* Even smaller font size for count */
             margin-top: 0.1rem; /* Even smaller margin above the count */
             line-height: 1; /* Ensure minimal line height */
             transition: color 0.3s ease;
         }
         /* Item-count Dark Theme */
         body[data-theme='dark'] .item-count {
-            color: #a0aec0; /* Lighter grey for count text */
+            color: #a0aec0;
         }
 
         /* New CSS for fade-in effect on thumbnails */
@@ -604,9 +715,9 @@
             top: 14px; /* Adjusted to be near the top right of the container */
             right: 10px; /* Adjusted to be near the top right of the container */
             display: flex;
-            flex-direction: row; /* Arrange buttons horizontally */
+            flex-direction: column; /* Changed to column for vertical stacking */
             gap: 10px; /* Space between buttons */
-            align-items: center; /* Vertically align items */
+            align-items: center; /* Horizontally align items in the column */
             z-index: 500; /* Ensure it's above other breadcrumb content if needed */
         }
 
@@ -663,6 +774,9 @@
         body[data-theme='light'] {
             background-color: #f7fafc; /* Light background */
             color: #2d3748; /* Dark text */
+        }
+        body[data-theme='light'] h1 {
+            color: #1a202c; /* Darker color for light theme heading */
         }
         body[data-theme='light'] .container {
             background-color: #ffffff;
@@ -762,6 +876,292 @@
         body[data-theme='light'] .trash-nav-link:hover {
             background-color: #cbd5e0;
         }
+
+        /* Drag and Drop styles */
+        .drag-over {
+            border: 3px dashed #6366f1; /* Indigo dashed border */
+            background-color: rgba(99, 102, 241, 0.1); /* Light indigo background */
+        }
+        /* Message Box styles */
+        #messageBox {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 44px 15px rgba(0, 0, 0, 0.2);
+            z-index: 2000; /* Above everything else */
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            font-size: 0.9rem;
+            min-width: 250px;
+            text-align: center;
+        }
+        #messageBox.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* MODIFIED: New style for the square 'Create New Folder' button */
+        .add-folder-square-btn {
+            width: 40px !important;
+            height: 40px !important;
+            min-width: 40px !important; /* Override folder-nav-button min-width */
+            padding: 0 !important;
+            /* The following are inherited from nav-link but good to be explicit */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .add-folder-square-btn .material-icons {
+            font-size: 1.8rem; /* Adjust icon size to fit nicely */
+            margin: 0; /* Remove any potential margins */
+        }
+
+
+        /* Create Folder Modal */
+        .create-folder-modal-overlay { /* Changed ID to class for consistency */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .create-folder-modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .create-folder-modal-content { /* Changed ID to class for consistency */
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+        }
+        body[data-theme='dark'] .create-folder-modal-content {
+            background-color: #2d3748;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+            color: #e2e8f0;
+        }
+        body[data-theme='light'] .create-folder-modal-content {
+            background-color: #ffffff;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            color: #2d3748;
+        }
+        .create-folder-modal-content h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .create-folder-modal-content input {
+            width: calc(100% - 2rem); /* Full width minus padding */
+            padding: 0.75rem;
+            margin-bottom: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        body[data-theme='dark'] .create-folder-modal-content input {
+            background-color: #4a5568;
+            border-color: #6a768f;
+            color: #e2e8f0;
+        }
+        .create-folder-modal-content .modal-buttons button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            margin: 0 0.5rem;
+        }
+        .create-folder-modal-content .modal-buttons .confirm-btn {
+            background-color: #4f46e5; /* Indigo */
+            color: white;
+        }
+        .create-folder-modal-content .modal-buttons .confirm-btn:hover {
+            background-color: #6366f1;
+        }
+        .create-folder-modal-content .modal-buttons .cancel-btn {
+            background-color: #e2e8f0;
+            color: #4a5568;
+        }
+        body[data-theme='dark'] .create-folder-modal-content .modal-buttons .cancel-btn {
+            background-color: #6a768f;
+            color: #e2e8f0;
+        }
+        body[data-theme='dark'] .create-folder-modal-content .modal-buttons .cancel-btn:hover {
+            background-color: #8892b0;
+        }
+
+        /* Upload Progress Modal */
+        #uploadProgressModalOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        #uploadProgressModalOverlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        #uploadProgressModalContent {
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+        }
+        body[data-theme='dark'] #uploadProgressModalContent {
+            background-color: #2d3748;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+            color: #e2e8f0;
+        }
+        body[data-theme='light'] #uploadProgressModalContent {
+            background-color: #ffffff;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            color: #2d3748;
+        }
+        #uploadProgressModalContent h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        #uploadList {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 0.5rem;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        body[data-theme='dark'] #uploadList {
+            background-color: #4a5568;
+            border-color: #6a768f;
+            color: #e2e8f0;
+        }
+        #uploadList li {
+            text-align: left;
+            padding: 0.2rem 0;
+            border-bottom: 1px solid #eee;
+        }
+        #uploadList li:last-child {
+            border-bottom: none;
+        }
+        #overallProgressBarContainer {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            margin-top: 1rem;
+            height: 15px;
+            overflow: hidden;
+        }
+        body[data-theme='dark'] #overallProgressBarContainer {
+            background-color: #4a5568;
+        }
+        #overallProgressBar {
+            height: 100%;
+            width: 0%;
+            background-color: #4f46e5; /* Indigo */
+            border-radius: 5px;
+            text-align: center;
+            color: white;
+            transition: width 0.3s ease;
+        }
+        #overallProgressText {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+        #uploadProgressModalContent .modal-buttons {
+            margin-top: 1.5rem;
+        }
+        /* Styling for the modal buttons to ensure they look like buttons */
+        #uploadProgressModalContent .modal-buttons button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            margin: 0 0.5rem;
+            border: none; /* Ensure no default button border */
+        }
+        #uploadProgressModalContent .modal-buttons .confirm-btn {
+            background-color: #4f46e5; /* Indigo */
+            color: white;
+        }
+        #uploadProgressModalContent .modal-buttons .confirm-btn:hover {
+            background-color: #6366f1;
+        }
+        #uploadProgressModalContent .modal-buttons .cancel-btn {
+            background-color: #e2e8f0;
+            color: #4a5568;
+        }
+        body[data-theme='dark'] #uploadProgressModalContent .modal-buttons .cancel-btn {
+            background-color: #6a768f;
+            color: #e2e8f0;
+        }
+        body[data-theme='dark'] .uploadProgressModalContent .modal-buttons .cancel-btn:hover {
+            background-color: #8892b0;
+        }
+
+        /* NEW: Delete Folder Button Styles */
+        .delete-folder-btn {
+            position: absolute;
+            top: -5px; /* Adjust as needed for positioning */
+            right: -5px; /* Adjust as needed for positioning */
+            background-color: rgba(220, 38, 38, 0.8); /* Red background */
+            color: white;
+            border-radius: 50%;
+            width: 24px; /* Smaller default size */
+            height: 24px; /* Smaller default size */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.9rem; /* Smaller icon size */
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10; /* Above the folder link */
+            opacity: 0; /* Hidden by default */
+            transform: scale(1); /* Initial scale */
+            transition: opacity 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+        }
+        /* Show and grow on hover over the parent folder-nav-button */
+        .folder-nav-button:hover .delete-folder-btn {
+            opacity: 1;
+            transform: scale(1.5); /* Grow by 50% */
+        }
+        .delete-folder-btn:hover {
+            background-color: rgba(220, 38, 38, 1); /* Darker red on hover */
+        }
+        /* Ensure the icon within the delete button is centered and sized correctly */
+        .delete-folder-btn .material-icons {
+            font-size: 1.2rem; /* Adjust icon size within the button */
+        }
+
     </style>
 </head>
 <body>
@@ -769,6 +1169,14 @@
         <h1 class="font-extrabold text-center text-gray-300 mb-8">Photo & Video Gallery Browser</h1>
         <!-- Action buttons container for breadcrumb area -->
         <div id="breadcrumbActionButtonsContainer">
+            <!-- NEW: Home Button (Top Right) -->
+            <button id="homeBtnTopRight" class="circular-action-btn" title="Home" style="background-color: rgba(79, 70, 229, 0.4);">
+                <i class="material-icons">home</i>
+            </button>
+            <!-- NEW: Upload Files button moved here -->
+            <button id="uploadFilesBtn" class="circular-action-btn" title="Upload Files" style="background-color: rgba(79, 70, 229, 0.4);">
+                <i class="material-icons">cloud_upload</i>
+            </button>
             <!-- Theme Toggle button for breadcrumb area -->
             <button id="themeToggleButton" class="circular-action-btn slideshow-btn-style" title="Toggle Theme">
                 <i class="material-icons light_mode_icon">light_mode</i>
@@ -781,38 +1189,27 @@
             </button>
         </div>
 
-        <div class="breadcrumb mb-6 text-center">
-            <div class="breadcrumb-path-container">
-                <a href="#" id="homeLink" class="nav-link">Home</a>
-                <span id="breadcrumbPath"></span>
+        <div class="breadcrumb mb-6 flex items-center justify-center"> <!-- Removed text-center and justify-between, added justify-center -->
+            <div id="breadcrumbPathContent" class="flex items-center flex-wrap gap-2"> <!-- Added flex properties here -->
+                <!-- Home button and breadcrumb path will be dynamically inserted here by JS -->
             </div>
         </div>
 
         <!-- Navigation Sections -->
-        <div id="yearsSection" class="mb-8">
-            <h2 class="section-title">Years</h2>
-            <div id="yearsContainer" class="flex flex-wrap justify-center gap-4">
+        <div id="topLevelFoldersSection" class="mb-8">
+            <div id="topLevelFoldersContainer" class="flex flex-wrap justify-center gap-4">
                 <!-- Year links will be loaded here -->
             </div>
         </div>
 
-        <div id="monthsSection" class="mb-8 hidden">
-            <h2 class="section-title">Months in <span id="currentYear"></span></h2>
-            <div id="monthsContainer" class="flex flex-wrap justify-center gap-4">
+        <div id="subFoldersSection" class="mb-8 hidden">
+            <div id="subFoldersContainer" class="flex flex-wrap justify-center gap-4">
                 <!-- Month links will be loaded here -->
-            </div>
-        </div>
-
-        <div id="daysSection" class="mb-8 hidden">
-            <h2 class="section-title">Days in <span id="currentMonthYear"></span></h2>
-            <div id="daysContainer" class="flex flex-wrap justify-center gap-4">
-                <!-- Day links will be loaded here -->
             </div>
         </div>
 
         <!-- Image/Video Gallery Section (for files in year/month/day folders) -->
         <div id="gallerySection" class="mb-8 hidden">
-            <h2 class="section-title">Media from <span id="currentMediaFolder"></span></h2>
             <div id="galleryContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6 gap-6 gallery-grid">
                 <!-- Image/Video thumbnails will be loaded here -->
             </div>
@@ -871,6 +1268,42 @@
         </div>
     </div>
 
+    <!-- NEW: Create Folder Modal -->
+    <div id="createFolderModalOverlay" class="create-folder-modal-overlay">
+        <div id="createFolderModalContent" class="create-folder-modal-content">
+            <h3 id="createFolderModalTitle">Create New Folder</h3>
+            <input type="text" id="newFolderNameInput" placeholder="Enter folder name">
+            <div class="modal-buttons">
+                <button id="confirmCreateFolderBtn" class="confirm-btn">Create</button>
+                <button id="cancelCreateFolderBtn" class="cancel-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: Upload Progress Modal -->
+    <div id="uploadProgressModalOverlay" class="confirmation-modal-overlay">
+        <div id="uploadProgressModalContent" class="confirmation-modal-content">
+            <h3>Upload Files</h3>
+            <p class="text-sm text-gray-500 mb-4">Select files to upload, then click 'Start Upload' to begin.</p>
+            <p id="uploadTargetFolderInfo" class="text-sm text-gray-500 mb-2"></p> <!-- NEW: Target folder info -->
+            <input type="file" id="fileInput" multiple accept="image/*,video/*,.nef,.nrw,.cr2,.cr3,.crw,.arw,.srf,.sr2,.orf,.raf,.rw2,.raw,.dng,.kdc,.dcr,.erf,.3fr,.mef,.pef,.x3f" class="hidden">
+            <ul id="uploadList" class="list-disc list-inside text-left mb-4 p-2 border rounded-md">
+                <!-- Uploaded files will be listed here -->
+            </ul>
+            <div id="overallProgressBarContainer">
+                <div id="overallProgressBar"></div>
+            </div>
+            <p id="overallProgressText">0% Complete</p>
+            <div class="modal-buttons">
+                <button id="startUploadBtn" class="confirm-btn">Start Upload</button>
+                <button id="cancelUploadBtn" class="cancel-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Box -->
+    <div id="messageBox"></div>
+
     <script>
         // --- Configuration for Image Library Path ---
         const TRASH_FOLDER_NAME = '_Trash'; // Keep this consistent with server.py
@@ -893,21 +1326,15 @@
         const MEDIA_EXTENSIONS = IMAGE_EXTENSIONS.concat(RAW_EXTENSIONS).concat(VIDEO_EXTENSIONS);
 
 
-        const yearsContainer = document.getElementById('yearsContainer');
-        const monthsContainer = document.getElementById('monthsContainer');
-        const daysContainer = document.getElementById('daysContainer');
+        const topLevelFoldersContainer = document.getElementById('topLevelFoldersContainer');
+        const subFoldersContainer = document.getElementById('subFoldersContainer');
         const galleryContainer = document.getElementById('galleryContainer');
 
-        const yearsSection = document.getElementById('yearsSection');
-        const monthsSection = document.getElementById('monthsSection');
-        const daysSection = document.getElementById('daysSection');
+        const topLevelFoldersSection = document.getElementById('topLevelFoldersSection');
+        const subFoldersSection = document.getElementById('subFoldersSection');
         const gallerySection = document.getElementById('gallerySection');
 
-        const currentYearSpan = document.getElementById('currentYear');
-        const currentMonthYearSpan = document.getElementById('currentMonthYear');
-        const currentMediaFolderSpan = document.getElementById('currentMediaFolder');
-        const breadcrumbPath = document.getElementById('breadcrumbPath');
-        const homeLink = document.getElementById('homeLink');
+        const breadcrumbPathContent = document.getElementById('breadcrumbPathContent'); // NEW: Reference to the new container
         
         // Action buttons (now distinct for breadcrumb and lightbox)
         const slideshowBtnBreadcrumb = document.getElementById('slideshowBtnBreadcrumb'); 
@@ -932,10 +1359,39 @@
         const confirmationMessage = document.getElementById('confirmationMessage');
 
         let fileToProcessPath = ''; // Stores the full relative path of the file to be moved/deleted/restored
+        let folderToProcessPath = []; // Stores the array path of the folder to be deleted
+        let isFolderDeletion = false; // Flag to differentiate between file and folder deletion
         let spinnerTimeout = null; // To hold the timeout ID for the spinner
 
         // Theme Toggle Button
         const themeToggleButton = document.getElementById('themeToggleButton');
+
+        // NEW: Create Folder Modal Elements (variables for elements, not the buttons themselves)
+        const createFolderModalOverlay = document.getElementById('createFolderModalOverlay');
+        const createFolderModalContent = document.getElementById('createFolderModalContent'); // Added to match new class
+        const createFolderModalTitle = document.getElementById('createFolderModalTitle');
+        const newFolderNameInput = document.getElementById('newFolderNameInput');
+        const confirmCreateFolderBtn = document.getElementById('confirmCreateFolderBtn');
+        const cancelCreateFolderBtn = document.getElementById('cancelCreateFolderBtn');
+        let folderCreationType = ''; // 'year', 'month', 'day'
+
+        // NEW: Upload Elements
+        const uploadFilesBtn = document.getElementById('uploadFilesBtn');
+        const fileInput = document.getElementById('fileInput');
+        const uploadProgressModalOverlay = document.getElementById('uploadProgressModalOverlay');
+        const uploadList = document.getElementById('uploadList');
+        const overallProgressBarContainer = document.getElementById('overallProgressBarContainer');
+        const overallProgressBar = document.getElementById('overallProgressBar');
+        const overallProgressText = document.getElementById('overallProgressText');
+        const startUploadBtn = document.getElementById('startUploadBtn');
+        const cancelUploadBtn = document.getElementById('cancelUploadBtn');
+        const uploadTargetFolderInfo = document.getElementById('uploadTargetFolderInfo'); // NEW: Target folder info element
+        let filesToUpload = [];
+        let uploadedFilesCount = 0;
+
+        // NEW: Home Button (Top Right) reference
+        const homeBtnTopRight = document.getElementById('homeBtnTopRight');
+
 
         // Function to set the theme
         function setTheme(theme) {
@@ -952,6 +1408,57 @@
                 darkIcon.classList.remove('hidden');
             }
         }
+
+        // Function to update the visibility of action buttons based on current view
+        function updateActionButtonsVisibility() {
+            const isLightboxActive = lightboxOverlay.classList.contains('active');
+            const isViewingTrash = currentPath.includes(TRASH_FOLDER_NAME);
+            // MODIFIED: Show slideshow button if in any gallery view (year, month, or day)
+            const isGalleryView = !gallerySection.classList.contains('hidden') || !subFoldersSection.classList.contains('hidden');
+            const hasMediaInCurrentFolder = currentDisplayedMedia.length > 0;
+            const isRawFile = currentDisplayedMedia[currentMediaIndex] && RAW_EXTENSIONS.includes('.' + currentDisplayedMedia[currentMediaIndex].filename.split('.').pop().toLowerCase());
+
+
+            // Slideshow buttons
+            if (isGalleryView && hasMediaInCurrentFolder && !isViewingTrash) {
+                slideshowBtnBreadcrumb.classList.remove('hidden');
+            } else {
+                slideshowBtnBreadcrumb.classList.add('hidden');
+            }
+
+            if (isLightboxActive) {
+                slideshowBtnLightbox.classList.remove('hidden');
+                // Trash/Restore buttons in lightbox
+                if (isViewingTrash) {
+                    trashDeleteBtn.classList.remove('hidden'); // Permanent delete
+                    trashRestoreBtn.classList.remove('hidden'); // Restore
+                } else {
+                    trashDeleteBtn.classList.remove('hidden'); // Move to trash
+                    trashRestoreBtn.classList.add('hidden');
+                }
+                // Download RAW button in lightbox
+                if (isRawFile && !isViewingTrash) {
+                    downloadRawBtn.classList.remove('hidden');
+                } else {
+                    downloadRawBtn.classList.add('hidden');
+                }
+            } else {
+                slideshowBtnLightbox.classList.add('hidden');
+                trashDeleteBtn.classList.add('hidden');
+                trashRestoreBtn.classList.add('hidden');
+                downloadRawBtn.classList.add('hidden');
+            }
+
+            // Upload button
+            if (isViewingTrash) {
+                uploadFilesBtn.classList.add('hidden');
+            } else {
+                uploadFilesBtn.classList.remove('hidden');
+            }
+
+            updateSlideshowControls(); // Ensure slideshow icons are correct
+        }
+
 
         // Intersection Observer for lazy loading images
         const lazyLoadObserver = new IntersectionObserver((entries, observer) => {
@@ -977,82 +1484,55 @@
 
         // Function to update the breadcrumb navigation and button visibility
         function updateBreadcrumb() {
-            let pathHtml = '';
+            breadcrumbPathContent.innerHTML = ''; // Clear existing content
+            // Ensure breadcrumbPathContent is the flex container for its children
+            breadcrumbPathContent.classList.add('flex', 'items-center', 'flex-wrap', 'gap-2');
+
+            // Create the Home button for the breadcrumb
+            const homeBreadcrumbBtn = createFolderNavLink("Home", [], null, false, true); // Added isBreadcrumb = true
+            homeBreadcrumbBtn.onclick = async (e) => {
+                e.preventDefault();
+                currentPath = [];
+                await loadTopLevelFolders();
+                updateBreadcrumb();
+            };
+            breadcrumbPathContent.appendChild(homeBreadcrumbBtn);
+
+            // Add the first separator after the home button, if there are path segments
+            if (currentPath.length > 0) {
+                const separator = document.createElement('span');
+                separator.classList.add('breadcrumb-separator');
+                separator.innerHTML = '&#11157;'; // Right arrow
+                breadcrumbPathContent.appendChild(separator);
+            }
+
             currentPath.forEach((segment, index) => {
-                let displayContent = segment;
-                // If the segment is the trash folder, display the icon instead of text
-                if (segment === TRASH_FOLDER_NAME) {
-                    displayContent = '<i class="material-icons">delete</i>';
+                const link = createFolderNavLink(segment, currentPath.slice(0, index + 1), null, segment === TRASH_FOLDER_NAME, true); // Added isBreadcrumb = true
+                link.onclick = (e) => {
+                    e.preventDefault();
+                    currentPath = currentPath.slice(0, index + 1);
+                    loadSubFoldersAndFiles(currentPath);
+                    updateBreadcrumb();
+                };
+                breadcrumbPathContent.appendChild(link);
+
+                // Add separator after each segment, except the last one
+                if (index < currentPath.length - 1) {
+                    const separator = document.createElement('span');
+                    separator.classList.add('breadcrumb-separator');
+                    separator.innerHTML = '&#11157;'; // Right arrow
+                    breadcrumbPathContent.appendChild(separator);
                 }
-                pathHtml += `<span class="breadcrumb-separator">&#11157;</span> <a href="#" data-path-index="${index}" class="nav-link">${displayContent}</a>`;
             });
-            breadcrumbPath.innerHTML = pathHtml;
+
             updateActionButtonsVisibility(); // Update visibility of action buttons
         }
 
-        // Function to control visibility of action buttons
-        function updateActionButtonsVisibility() {
-            const isViewingTrash = currentPath.includes(TRASH_FOLDER_NAME);
-            const isLightboxActive = lightboxOverlay.classList.contains('active');
-            const isViewingMediaFolder = currentPath.length >= 1 && !isViewingTrash;
-
-            console.log(`[updateActionButtonsVisibility] isViewingTrash: ${isViewingTrash}, isLightboxActive: ${isLightboxActive}, isViewingMediaFolder: ${isViewingMediaFolder}`);
-
-            // Breadcrumb Slideshow button visibility
-            if (isViewingMediaFolder && !isLightboxActive) { // Only show if viewing a media folder (not trash) AND lightbox is not active
-                slideshowBtnBreadcrumb.classList.remove('hidden');
-            } else {
-                slideshowBtnBreadcrumb.classList.add('hidden');
-            }
-
-            // Lightbox Slideshow button visibility
-            if (isLightboxActive && isViewingMediaFolder) { // Only show if lightbox is active and it's a non-trash media folder
-                slideshowBtnLightbox.classList.remove('hidden');
-            } else {
-                slideshowBtnLightbox.classList.add('hidden');
-            }
-            updateSlideshowControls(); // Update slideshow icons based on state for both buttons
-
-            // Lightbox Trash/Delete button visibility
-            if (isLightboxActive) {
-                trashDeleteBtn.classList.remove('hidden');
-                trashDeleteBtn.title = isViewingTrash ? 'Delete Permanently' : 'Move to Trash';
-            } else {
-                trashDeleteBtn.classList.add('hidden');
-            }
-
-            // Lightbox Restore button visibility
-            if (isViewingTrash && isLightboxActive) {
-                trashRestoreBtn.classList.remove('hidden');
-            } else {
-                trashRestoreBtn.classList.add('hidden');
-            }
-            // Note: Download RAW button visibility is handled in updateLightboxMedia for precise control
-        }
-
-        // Event listener for breadcrumb clicks
-        breadcrumbPath.addEventListener('click', (event) => {
-            if (event.target.classList.contains('nav-link')) {
-                const index = parseInt(event.target.dataset.pathIndex);
-                currentPath = currentPath.slice(0, index + 1);
-                if (currentPath.length === 1 && currentPath[0] === TRASH_FOLDER_NAME) {
-                    loadTrashContent(); 
-                } else if (currentPath.length === 1) { 
-                    loadMonths(currentPath[0]);
-                } else if (currentPath.length === 2) { 
-                    loadDays(currentPath[0], currentPath[1]);
-                } else if (currentPath.length === 0) { 
-                    loadYears();
-                }
-                updateBreadcrumb();
-            }
-        });
-
-        // Home link functionality
-        homeLink.addEventListener('click', (event) => {
+        // Home button functionality (new circular button in top right)
+        homeBtnTopRight.addEventListener('click', async (event) => {
             event.preventDefault();
             currentPath = [];
-            loadYears();
+            await loadTopLevelFolders();
             updateBreadcrumb();
         });
 
@@ -1091,22 +1571,11 @@
 
                     if (isViewingTrash) {
                         fullRelativePathForOriginal = mediaItem.relative_path_in_trash; 
-                        const fileExtension = filename.split('.').pop().toLowerCase();
-                        // For images and RAW files in trash, use the /api/thumbnail endpoint
-                        if (IMAGE_EXTENSIONS.includes('.' + fileExtension) || RAW_EXTENSIONS.includes('.' + fileExtension)) {
-                            thumbnailMediaUrl = `/api/thumbnail/${fullRelativePathForOriginal}`;
-                        } else { // For videos in trash, use the direct path
-                            thumbnailMediaUrl = `/${fullRelativePathForOriginal}`;
-                        }
+                        thumbnailMediaUrl = `/api/media/${fullRelativePathForOriginal}`; // Serve directly from /api/media for trashed thumbnails
                     } else {
                         fullRelativePathForOriginal = mediaItem.original_path; 
-                        const fileExtension = filename.split('.').pop().toLowerCase();
-                        // Use the /api/thumbnail endpoint for images, original path for videos
-                        if (IMAGE_EXTENSIONS.includes('.' + fileExtension) || RAW_EXTENSIONS.includes('.' + fileExtension)) {
-                            thumbnailMediaUrl = `/api/thumbnail/${fullRelativePathForOriginal}`;
-                        } else { // For videos, use the original path as its own thumbnail
-                            thumbnailMediaUrl = `/${fullRelativePathForOriginal}`;
-                        }
+                        // MODIFIED: Always use the thumbnail endpoint for all media types
+                        thumbnailMediaUrl = `/api/thumbnail/${fullRelativePathForOriginal}`;
                     }
                     
                     if (typeof filename === 'string' && filename) { 
@@ -1117,18 +1586,15 @@
                         galleryItem.classList.add('gallery-item', 'relative');
                         galleryItem.dataset.index = index; 
 
-                        let mediaElement;
+                        // MODIFIED: Always use an <img> for the thumbnail, even for videos
+                        let mediaElement = document.createElement('img');
+                        mediaElement.dataset.src = thumbnailMediaUrl; 
+                        mediaElement.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='; 
+
                         if (isVideo) {
-                            mediaElement = document.createElement('video');
-                            mediaElement.dataset.src = thumbnailMediaUrl; 
-                            mediaElement.preload = "metadata";
                             const videoOverlay = document.createElement('div');
                             videoOverlay.classList.add('video-thumbnail-overlay');
                             galleryItem.appendChild(videoOverlay);
-                        } else {
-                            mediaElement = document.createElement('img');
-                            mediaElement.dataset.src = thumbnailMediaUrl; 
-                            mediaElement.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='; 
                         }
 
                         mediaElement.classList.add('thumbnail-fade-in');
@@ -1162,7 +1628,7 @@
                             // For trash items, pass the relative_path_in_trash for deletion
                             // For regular items, pass the original_path for moving to trash
                             const pathForAction = isViewingTrash ? mediaItem.relative_path_in_trash : mediaItem.original_path;
-                            showConfirmationModal(pathForAction, isViewingTrash, false); 
+                            showConfirmationModal(pathForAction, isViewingTrash, false); // Changed to use new showConfirmationModal signature
                         };
 
                         galleryItem.appendChild(mediaElement);
@@ -1182,57 +1648,136 @@
             updateActionButtonsVisibility(); 
         }
 
-        // 1. Load Years and Trash Button
-        async function loadYears() {
-            monthsSection.classList.add('hidden');
-            daysSection.classList.add('hidden');
+        // Helper function to create the dynamic '+' button
+        function createAddFolderButton(type) {
+            const button = document.createElement('a');
+            button.href = "#";
+            // NEW: Styles for square + button
+            button.classList.add('nav-link', 'folder-nav-button', 'add-folder-square-btn'); 
+            button.title = "Create New";
+            
+            const icon = document.createElement('i');
+            icon.classList.add('material-icons');
+            icon.textContent = 'add'; // Plus icon
+
+            button.appendChild(icon);
+
+            button.onclick = (e) => {
+                e.preventDefault();
+                showCreateFolderModal(type);
+            };
+            return button;
+        }
+
+        // Helper function to create a folder navigation link with delete button
+        function createFolderNavLink(folderName, pathSegments, count = null, isTrashFolder = false, isBreadcrumb = false) {
+            const link = document.createElement('a');
+            link.href = "#";
+            link.classList.add('nav-link', 'folder-nav-button'); // Keep base classes
+
+            // NEW: Remove background/shadow for folder-nav-button
+            link.style.backgroundColor = 'transparent';
+            link.style.boxShadow = 'none';
+            link.style.color = 'inherit'; /* Inherit text color from parent for light/dark theme */
+            link.style.padding = '0.5rem'; /* Adjust padding for compact look */
+
+            if (isTrashFolder) {
+                link.classList.add('trash-nav-link');
+            }
+            // Add specific class for breadcrumb items if needed for further styling
+            if (isBreadcrumb) {
+                link.classList.add('breadcrumb-folder-link');
+                // For breadcrumb home button, make it round
+                if (folderName === "Home") {
+                    link.classList.add('home-breadcrumb-btn'); /* Apply specific home button styles */
+                }
+            }
+
+            const folderIconWrapper = document.createElement('div');
+            folderIconWrapper.classList.add('folder-icon-wrapper');
+
+            const folderIcon = document.createElement('i');
+            folderIcon.classList.add('material-icons', 'folder-icon');
+            folderIcon.textContent = isTrashFolder ? 'delete' : (folderName === "Home" ? 'home' : 'folder'); // Use home icon for Home button
+
+            const nameText = document.createElement('span');
+            nameText.classList.add('folder-name-overlay');
+            nameText.textContent = folderName;
+
+            folderIconWrapper.appendChild(folderIcon);
+            folderIconWrapper.appendChild(nameText);
+            link.appendChild(folderIconWrapper);
+
+            if (count !== undefined && count !== null) {
+                const countText = document.createElement('span');
+                countText.classList.add('item-count');
+                countText.textContent = `(${count} items)`;
+                link.appendChild(countText);
+            }
+
+            // Add delete button for non-trash folders (and not for breadcrumb items, as they are navigation, not actual folders to delete from that context)
+            if (!isTrashFolder && !isBreadcrumb) {
+                const deleteBtn = document.createElement('div');
+                deleteBtn.classList.add('delete-folder-btn');
+                deleteBtn.innerHTML = '<i class="material-icons">close</i>'; // Red cross icon
+                deleteBtn.title = `Delete folder ${folderName}`;
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation(); // Prevent folder navigation when clicking delete
+                    // Pass the full path segments for the folder to be deleted
+                    const fullFolderPathToDelete = [...pathSegments]; // Use the pathSegments passed to the function
+                    showConfirmationModal(fullFolderPathToDelete, false, false); // Pass array, not permanent, not restore
+                };
+                link.appendChild(deleteBtn);
+            }
+
+            return link;
+        }
+
+
+        // 1. Load Top-Level Folders
+        async function loadTopLevelFolders() {
+            subFoldersSection.classList.add('hidden');
             gallerySection.classList.add('hidden');
-            yearsSection.classList.remove('hidden');
+            topLevelFoldersSection.classList.remove('hidden');
             currentPath = []; 
             
-            yearsContainer.innerHTML = '';
-            showLoading(yearsContainer);
+            topLevelFoldersContainer.innerHTML = '';
+            showLoading(topLevelFoldersContainer);
             try {
-                const response = await fetch('/api/years');
+                const response = await fetch('/api/folders');
                 if (!response.ok) {
                     const errorText = await response.text();
                     throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
                 }
-                const yearsData = await response.json(); 
+                const data = await response.json();
+                const foldersData = data.folders;
+                const files = data.files;
 
-                yearsContainer.innerHTML = ''; 
-                if (yearsData.length > 0) {
-                    yearsData.forEach(yearItem => {
-                        const link = document.createElement('a');
-                        link.href = "#";
-                        link.classList.add('nav-link', 'folder-nav-button'); 
+                topLevelFoldersContainer.innerHTML = ''; 
+                if (foldersData.length > 0) {
+                    foldersData.forEach(folderItem => {
+                        const link = createFolderNavLink(folderItem.name, [folderItem.name], folderItem.count);
                         link.onclick = (e) => {
                             e.preventDefault();
-                            currentPath = [yearItem.year]; 
-                            loadMonths(yearItem.year);
+                            currentPath = [folderItem.name]; 
+                            loadSubFoldersAndFiles(currentPath);
                             updateBreadcrumb();
                         };
-                        
-                        const yearText = document.createElement('span');
-                        yearText.textContent = yearItem.year;
-                        link.appendChild(yearText);
-
-                        if (yearItem.count !== undefined && yearItem.count !== null) {
-                            const countText = document.createElement('span'); 
-                            countText.classList.add('item-count');
-                            countText.textContent = `(${yearItem.count} items)`;
-                            link.appendChild(countText);
-                        }
-                        yearsContainer.appendChild(link);
+                        topLevelFoldersContainer.appendChild(link);
                     });
                 } else {
-                    yearsContainer.innerHTML = '<p class="text-center text-gray-600 col-span-full">No years found.</p>';
+                    topLevelFoldersContainer.innerHTML = '<p class="text-center text-gray-600 col-span-full">No folders found.</p>';
                 }
 
+                if (files.length > 0) {
+                    displayMediaThumbnails(files, []);
+                }
+
+                // Add the dynamic "Create New Folder" button
+                topLevelFoldersContainer.appendChild(createAddFolderButton('folder'));
+
                 // Add the Trash button as the last item
-                const trashLink = document.createElement('a');
-                trashLink.href = "#";
-                trashLink.classList.add('nav-link', 'trash-nav-link', 'folder-nav-button'); 
+                const trashLink = createFolderNavLink(TRASH_FOLDER_NAME, [TRASH_FOLDER_NAME], 0, true); // Initial count 0
                 trashLink.onclick = (e) => {
                     e.preventDefault();
                     currentPath = [TRASH_FOLDER_NAME]; 
@@ -1240,199 +1785,85 @@
                     updateBreadcrumb();
                 };
                 
-                const trashIcon = document.createElement('i');
-                trashIcon.classList.add('material-icons');
-                trashIcon.textContent = 'delete';
-                trashLink.appendChild(trashIcon);
-
-                const trashText = document.createElement('span');
-                trashText.textContent = ''; 
-                trashLink.appendChild(trashText);
-
                 // Fetch trash count separately for the button
                 try {
                     const trashResponse = await fetch('/api/trash_content');
                     if (trashResponse.ok) {
                         const trashData = await trashResponse.json();
                         if (trashData.count !== undefined && trashData.count !== null) {
-                            const trashCountText = document.createElement('span'); 
-                            trashCountText.classList.add('item-count');
-                            trashCountText.textContent = `(${trashData.count} items)`;
-                            trashLink.appendChild(trashCountText);
+                            // Update the count displayed on the trashLink
+                            const existingCountSpan = trashLink.querySelector('.item-count');
+                            if (existingCountSpan) {
+                                existingCountSpan.textContent = `(${trashData.count} items)`;
+                            } else {
+                                const trashCountText = document.createElement('span'); 
+                                trashCountText.classList.add('item-count');
+                                trashCountText.textContent = `(${trashData.count} items)`;
+                                trashLink.appendChild(trashCountText);
+                            }
                         }
                     }
                 } catch (trashError) {
                     console.error('Error fetching trash count for button:', trashError);
                 }
-                yearsContainer.appendChild(trashLink);
+                topLevelFoldersContainer.appendChild(trashLink);
 
             } catch (error) {
-                console.error('Error fetching years:', error);
-                yearsContainer.innerHTML = '<p class="text-center text-red-600 col-span-full">Error loading years. Is the server running?</p>';
+                console.error('Error fetching top-level folders:', error);
+                topLevelFoldersContainer.innerHTML = '<p class="text-center text-red-600 col-span-full">Error loading folders. Is the server running?</p>';
             }
             updateActionButtonsVisibility(); 
         }
 
-        // 2. Load Months for a given Year AND files within that year folder
-        async function loadMonths(year) {
-            yearsSection.classList.add('hidden');
-            daysSection.classList.add('hidden');
-            monthsSection.classList.remove('hidden');
+        // 2. Load Sub-Folders and Files
+        async function loadSubFoldersAndFiles(pathSegments) {
+            topLevelFoldersSection.classList.add('hidden');
+            subFoldersSection.classList.remove('hidden');
             
-            showLoading(monthsContainer);
-            currentYearSpan.textContent = year;
-            currentPath = [year]; 
+            showLoading(subFoldersContainer);
+            currentPath = pathSegments; 
 
             try {
-                const response = await fetch(`/api/months/${year}`);
+                const response = await fetch(`/api/folders/${pathSegments.join('/')}`);
                 if (!response.ok) {
                     const errorText = await response.text();
                     throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
                 }
                 const data = await response.json();
-                const monthsData = data.months; 
+                const subFoldersData = data.folders; 
                 const files = data.files; 
 
-                monthsContainer.innerHTML = '';
-                if (monthsData.length > 0) {
-                    monthsData.forEach(monthItem => {
-                        const link = document.createElement('a');
-                        link.href = "#";
-                        link.classList.add('nav-link', 'folder-nav-button'); 
+                subFoldersContainer.innerHTML = '';
+                if (subFoldersData.length > 0) {
+                    subFoldersData.forEach(folderItem => {
+                        const link = createFolderNavLink(folderItem.name, [...pathSegments, folderItem.name], folderItem.count);
                         link.onclick = (e) => {
                             e.preventDefault();
-                            currentPath = [year, monthItem.month]; 
-                            loadDays(year, monthItem.month);
+                            currentPath = [...pathSegments, folderItem.name]; 
+                            loadSubFoldersAndFiles(currentPath);
                             updateBreadcrumb();
                         };
-                        const monthText = document.createElement('span');
-                        monthText.textContent = monthItem.month;
-                        link.appendChild(monthText);
-
-                        if (monthItem.count !== undefined && monthItem.count !== null) {
-                            const countText = document.createElement('span'); 
-                            countText.classList.add('item-count');
-                            countText.textContent = `(${monthItem.count} items)`;
-                            link.appendChild(countText);
-                        }
-                        monthsContainer.appendChild(link);
+                        subFoldersContainer.appendChild(link);
                     });
                 } else {
-                    monthsContainer.innerHTML = `<p class="text-center text-gray-600 col-span-full">No months found for ${year}.</p>`;
+                    subFoldersContainer.innerHTML = `<p class="text-center text-gray-600 col-span-full">No sub-folders found.</p>`;
                 }
 
+                // Add the dynamic "Create New Folder" button
+                subFoldersContainer.appendChild(createAddFolderButton('folder'));
+
                 if (files.length > 0) {
-                    currentMediaFolderSpan.textContent = year;
-                    displayMediaThumbnails(files, [year]); 
+                    displayMediaThumbnails(files, pathSegments); 
                 } else {
                     gallerySection.classList.add('hidden');
                     galleryContainer.innerHTML = '';
                 }
 
             } catch (error) {
-                console.error('Error fetching months and files:', error);
-                monthsContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading months for ${year}.</p>`;
+                console.error('Error fetching sub-folders and files:', error);
+                subFoldersContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading content for ${pathSegments.join('/')}.</p>`;
                 gallerySection.classList.add('hidden');
-                galleryContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading media for ${year}.</p>`;
-            }
-            updateActionButtonsVisibility(); 
-        }
-
-        // 3. Load Days for a given Year and Month AND files within that month folder
-        async function loadDays(year, month) {
-            yearsSection.classList.add('hidden');
-            monthsSection.classList.add('hidden');
-            daysSection.classList.remove('hidden');
-            
-            showLoading(daysContainer);
-            currentMonthYearSpan.textContent = `${month}/${year}`;
-            currentPath = [year, month]; 
-
-            try {
-                const response = await fetch(`/api/days/${year}/${month}`);
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
-                }
-                const data = await response.json();
-                const daysData = data.days; 
-                const files = data.files; 
-
-                daysContainer.innerHTML = '';
-                if (daysData.length > 0) {
-                    daysData.forEach(dayItem => {
-                        const link = document.createElement('a');
-                        link.href = "#";
-                        link.classList.add('nav-link', 'folder-nav-button'); 
-                        link.onclick = (e) => {
-                            e.preventDefault();
-                            currentPath = [year, month, dayItem.day]; 
-                            loadPhotos(year, month, dayItem.day);
-                            updateBreadcrumb();
-                        };
-                        const dayText = document.createElement('span');
-                        dayText.textContent = dayItem.day;
-                        link.appendChild(dayText);
-
-                        if (dayItem.count !== undefined && dayItem.count !== null) {
-                            const countText = document.createElement('span'); 
-                            countText.classList.add('item-count');
-                            countText.textContent = `(${dayItem.count} items)`;
-                            link.appendChild(countText);
-                        }
-                        daysContainer.appendChild(link);
-                    });
-                } else {
-                    daysContainer.innerHTML = `<p class="text-center text-gray-600 col-span-full">No days found for ${month}/${year}.</p>`;
-                }
-
-                if (files.length > 0) {
-                    currentMediaFolderSpan.textContent = `${month}/${year}`;
-                    displayMediaThumbnails(files, [year, month]); 
-                } else {
-                    gallerySection.classList.add('hidden');
-                    galleryContainer.innerHTML = '';
-                }
-
-            } catch (error) {
-                console.error('Error fetching days and files:', error);
-                daysContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading days for ${month}/${year}.</p>`;
-                gallerySection.classList.add('hidden');
-                galleryContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading media for ${month}/${year}.</p>`;
-            }
-            updateActionButtonsVisibility(); 
-        }
-
-        // 4. Load Photos/Videos for a given Year, Month, and Day
-        async function loadPhotos(year, month, day) {
-            yearsSection.classList.add('hidden');
-            monthsSection.classList.add('hidden');
-            daysSection.classList.add('hidden');
-            
-            showLoading(galleryContainer);
-            currentMediaFolderSpan.textContent = `${day}/${month}/${year}`;
-            currentPath = [year, month, day]; 
-
-            try {
-                const response = await fetch(`/api/photos/${year}/${month}/${day}`);
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
-                }
-                const files = await response.json(); 
-
-                if (files.length > 0) {
-                    gallerySection.classList.remove('hidden');
-                    displayMediaThumbnails(files, [year, month, day]); 
-                } else {
-                    gallerySection.classList.add('hidden');
-                    galleryContainer.innerHTML = '';
-                }
-
-            } catch (error) {
-                console.error('Error fetching photos for day folder:', error);
-                gallerySection.classList.add('hidden');
-                galleryContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading media for ${day}/${month}/${year}. Please check console for details.</p>`;
+                galleryContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading media for ${pathSegments.join('/')}.</p>`;
             }
             updateActionButtonsVisibility(); 
         }
@@ -1605,6 +2036,8 @@
             lightboxFilename.textContent = ''; 
             hideLoadingSpinner(); // Ensure spinner is hidden when closing lightbox
             updateActionButtonsVisibility();
+            // MODIFIED: Remove the media element from the DOM when closing the lightbox
+            lightboxMediaDisplay.querySelectorAll('.media-display').forEach(el => el.remove());
         }
 
         // Navigates to the next image/video in the lightbox
@@ -1636,15 +2069,13 @@
                 console.log('Slideshow paused.');
             } else {
                 let apiUrl = '';
-                if (currentPath.length === 1) { 
-                    apiUrl = `/api/recursive_media/year/${currentPath[0]}`;
-                } else if (currentPath.length === 2) { 
-                    apiUrl = `/api/recursive_media/month/${currentPath[0]}/${currentPath[1]}`;
-                } else if (currentPath.length === 3) { 
-                    apiUrl = `/api/photos/${currentPath[0]}/${currentPath[1]}/${currentPath[2]}`;
-                } else {
-                    alert('Please select a year, month, or day to start a slideshow.');
+                let pathSegmentsForApi = [...currentPath]; // Copy currentPath to modify for API call
+
+                if (currentPath.length === 0) {
+                    showMessage('Please navigate into a folder to start a slideshow.', 'info');
                     return;
+                } else {
+                    apiUrl = `/api/recursive_media/${pathSegmentsForApi.join('/')}`;
                 }
 
                 try {
@@ -1656,7 +2087,7 @@
                     const recursiveFiles = await response.json();
 
                     if (recursiveFiles.length === 0) {
-                        alert('No media found for slideshow in this selection.');
+                        showMessage('No media found for slideshow in this selection.', 'info');
                         return;
                     }
 
@@ -1672,7 +2103,7 @@
 
                 } catch (error) {
                     console.error('Error fetching recursive media for slideshow:', error);
-                    alert(`Error starting slideshow: ${error.message}`);
+                    showMessage(`Error starting slideshow: ${error.message}`, 'error');
                     closeLightbox();
                     return; 
                 }
@@ -1749,6 +2180,7 @@
                 document.body.removeChild(a);
             } else {
                 console.error("No media item selected or original path missing for download.");
+                showMessage("No media selected or original path missing for download.", "error");
             }
         });
 
@@ -1802,8 +2234,16 @@
         });
 
         // --- Confirmation Modal Functions ---
-        function showConfirmationModal(filePath, isPermanentDelete = false, isRestore = false) {
-            fileToProcessPath = filePath; 
+        // Unified function for file and folder deletion/restoration
+        function showConfirmationModal(filePathOrFolderArray, isPermanentDelete = false, isRestore = false) {
+            isFolderDeletion = Array.isArray(filePathOrFolderArray); // Check if it's an array (folder path)
+            if (isFolderDeletion) {
+                folderToProcessPath = filePathOrFolderArray;
+                fileToProcessPath = ''; // Clear file path
+            } else {
+                fileToProcessPath = filePathOrFolderArray;
+                folderToProcessPath = []; // Clear folder path
+            }
 
             if (isRestore) {
                 confirmationMessage.textContent = "Are you sure you want to restore this file to its original location?";
@@ -1815,7 +2255,14 @@
                 confirmActionBtn.textContent = "Delete Forever";
                 confirmActionBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
                 confirmActionBtn.classList.add('bg-red-600', 'hover:bg-red-700');
-            } else {
+            } else if (isFolderDeletion) { // New condition for folder deletion
+                const folderName = folderToProcessPath.join('/'); // Use folderToProcessPath directly
+                confirmationMessage.textContent = `Are you sure you want to delete the folder "${folderName}" and move all its contents (including all subfolders and their media) to Trash?`;
+                confirmActionBtn.textContent = "Delete Folder";
+                confirmActionBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+                confirmActionBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+            }
+            else { // Default to move file to trash
                 confirmationMessage.textContent = "Are you sure you want to move this file to Trash? It can be restored later from the Trash folder.";
                 confirmActionBtn.textContent = "Move to Trash";
                 confirmActionBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
@@ -1826,9 +2273,15 @@
             document.body.style.overflow = 'hidden'; 
         }
 
+        // New function for folder deletion confirmation (this will call showConfirmationModal)
+        function showFolderDeletionConfirmation(folderPathArray) {
+            showConfirmationModal(folderPathArray, false, false); // Pass array, not permanent, not restore
+        }
+
         function hideConfirmationModal() {
             confirmationModalOverlay.classList.remove('active');
             document.body.style.overflow = ''; 
+            isFolderDeletion = false; // Reset flag
         }
 
         // New function to handle refreshing the gallery and lightbox after an action
@@ -1837,76 +2290,76 @@
             const oldCurrentMediaIndex = currentMediaIndex; // Store the index before refreshing
 
             // Re-fetch the media for the current path.
-            // These functions will update `currentDisplayedMedia` and `currentPath`.
-            if (currentPath.length === 1 && currentPath[0] === TRASH_FOLDER_NAME) {
-                await loadTrashContent();
-            } else if (currentPath.length === 1) {
-                await loadMonths(currentPath[0]);
-            } else if (currentPath.length === 2) {
-                await loadDays(currentPath[0], currentPath[1]);
-            } else if (currentPath.length === 3) {
-                await loadPhotos(currentPath[0], currentPath[1], currentPath[2]);
-            } else {
-                // Fallback for unexpected path state, or if starting from root and deleting something
-                await loadYears();
+            if (currentPath.length > 0) {
+                if (currentPath[0] === TRASH_FOLDER_NAME) {
+                    await loadTrashContent();
+                } else {
+                    await loadSubFoldersAndFiles(currentPath);
+                }
+            } else { // At root
+                await loadTopLevelFolders();
             }
 
             // After re-loading, currentDisplayedMedia is updated.
             // Now, determine the new index for the lightbox.
-            if (currentDisplayedMedia.length === 0) {
-                // If no media left in the folder, close lightbox
-                closeLightbox();
-                return;
-            }
-
-            // Adjust currentMediaIndex:
-            // If the old index is now out of bounds (because the last item was removed),
-            // set it to the new last item's index.
-            if (oldCurrentMediaIndex >= currentDisplayedMedia.length) {
-                currentMediaIndex = currentDisplayedMedia.length - 1;
-            } else {
-                // Otherwise, keep the index. This will effectively show the item that
-                // moved into the old index's position (the "next" item).
-                currentMediaIndex = oldCurrentMediaIndex;
-            }
-
-            // If the lightbox was active, update it with the new media
             if (wasLightboxActive) {
-                updateLightboxMedia();
-            } else {
-                // If lightbox was not active (e.g., action from thumbnail grid),
-                // we don't need to do anything with the lightbox.
+                if (currentDisplayedMedia.length === 0) {
+                    // If no media left in the folder, close lightbox
+                    closeLightbox();
+                } else {
+                    // Adjust currentMediaIndex:
+                    // If the old index is now out of bounds (because the last item was removed),
+                    // set it to the new last item's index.
+                    if (oldCurrentMediaIndex >= currentDisplayedMedia.length) {
+                        currentMediaIndex = currentDisplayedMedia.length - 1;
+                    } else {
+                        // Otherwise, keep the index. This will effectively show the item that
+                        // moved into the old index's position (the "next" item).
+                        currentMediaIndex = oldCurrentMediaIndex;
+                    }
+                    updateLightboxMedia();
+                }
             }
         }
 
 
         // Event listeners for confirmation modal buttons
         confirmActionBtn.addEventListener('click', async () => {
-            const pathBeingProcessed = fileToProcessPath; 
-            hideConfirmationModal();
-            // Do NOT close lightbox here. handlePostActionRefresh will manage it.
+            hideConfirmationModal(); // Hide modal immediately
 
-            const isViewingTrash = currentPath.includes(TRASH_FOLDER_NAME);
             let actionSuccessful = false;
-
             try {
-                if (confirmActionBtn.textContent === "Restore") { 
-                    await restoreFile(pathBeingProcessed);
+                if (confirmActionBtn.textContent === "Delete Folder") {
+                    await deleteFolder(folderToProcessPath);
                     actionSuccessful = true;
-                } else if (isViewingTrash && confirmActionBtn.textContent === "Delete Forever") { 
-                    await deleteFileForever(pathBeingProcessed);
+                } else if (confirmActionBtn.textContent === "Restore") { 
+                    await restoreFile(fileToProcessPath);
                     actionSuccessful = true;
-                } else { 
-                    await moveFileToTrash(pathBeingProcessed);
+                } else if (confirmActionBtn.textContent === "Delete Forever") { 
+                    await deleteFileForever(fileToProcessPath);
+                    actionSuccessful = true;
+                } else { // Move file to trash
+                    await moveFileToTrash(fileToProcessPath);
                     actionSuccessful = true;
                 }
             } catch (error) {
-                console.error("Error during file action:", error);
-                alert(`An unexpected error occurred: ${error.message}`); 
+                console.error("Error during action:", error);
+                showMessage(`An unexpected error occurred: ${error.message}`, 'error'); 
             }
 
             if (actionSuccessful) {
-                await handlePostActionRefresh();
+                // For folder deletion, we need to navigate up one level after the action
+                if (confirmActionBtn.textContent === "Delete Folder") { // Re-check condition for navigation
+                    const newPath = [...currentPath];
+                    if (newPath.length > 0) {
+                        newPath.pop(); // Remove the last segment (the deleted folder)
+                    }
+                    currentPath = newPath; // Update currentPath
+                    await handlePostActionRefresh(); // Refresh the new currentPath
+                    updateBreadcrumb(); // Update breadcrumb to reflect new path
+                } else {
+                    await handlePostActionRefresh(); // For file actions, just refresh current path
+                }
             } else {
                 // If action wasn't successful, just close lightbox as a fallback
                 closeLightbox();
@@ -1929,7 +2382,7 @@
 
                 if (response.ok) {
                     console.log('File moved to trash successfully.');
-                    // Do NOT call load functions or closeLightbox here. handlePostActionRefresh will.
+                    showMessage('File moved to trash successfully.', 'success');
                 } else {
                     const errorData = await response.json();
                     console.error('Failed to move file to trash:', errorData.error);
@@ -1955,7 +2408,7 @@
 
                 if (response.ok) {
                     console.log('File permanently deleted successfully.');
-                    // Do NOT call load functions or closeLightbox here. handlePostActionRefresh will.
+                    showMessage('File permanently deleted successfully.', 'success');
                 } else {
                     const errorData = await response.json();
                     console.error('Failed to permanently delete file:', errorData.error);
@@ -1981,7 +2434,7 @@
 
                 if (response.ok) {
                     console.log('File restored successfully.');
-                    // Do NOT call load functions or closeLightbox here. handlePostActionRefresh will.
+                    showMessage('File restored successfully.', 'success');
                 } else {
                     const errorData = await response.json();
                     console.error('Failed to restore file:', errorData.error);
@@ -1993,17 +2446,42 @@
             }
         }
 
+        // --- NEW: Function to delete a folder and its contents to trash ---
+        async function deleteFolder(folderPathArray) {
+            const folderPathString = folderPathArray.join('/');
+            console.log(`Attempting to delete folder: ${folderPathString}`);
+            try {
+                const response = await fetch('/api/delete_folder', {
+                    method: 'POST', // Or 'DELETE' depending on backend design
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ path: folderPathArray }), // Send as array of segments
+                });
+
+                if (response.ok) {
+                    console.log(`Folder "${folderPathString}" and its contents moved to trash successfully.`);
+                    showMessage(`Folder "${folderPathString}" and its contents moved to trash successfully.`, 'success');
+                } else {
+                    const errorData = await response.json();
+                    console.error('Failed to delete folder:', errorData.error);
+                    throw new Error(errorData.error); // Throw error to be caught by caller
+                }
+            } catch (error) {
+                console.error('Network or unexpected error during folder deletion:', error);
+                throw error; // Re-throw to be caught by caller
+            }
+        }
+
 
         // --- New function to load Trash content ---
         async function loadTrashContent() {
-            yearsSection.classList.add('hidden');
-            monthsSection.classList.add('hidden');
-            daysSection.classList.add('hidden');
+            topLevelFoldersSection.classList.add('hidden');
+            subFoldersSection.classList.add('hidden');
             gallerySection.classList.remove('hidden'); 
             currentPath = [TRASH_FOLDER_NAME]; 
 
             showLoading(galleryContainer);
-            currentMediaFolderSpan.textContent = TRASH_FOLDER_NAME; 
 
             try {
                 const response = await fetch('/api/trash_content');
@@ -2017,14 +2495,229 @@
             } catch (error) {
                 console.error('Error fetching trash content:', error);
                 galleryContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading trash content: ${error.message}.</p>`;
-                // Do not throw here, just display error in gallery container
+                showMessage(`Error loading trash content: ${error.message}.`, 'error');
             }
             updateActionButtonsVisibility(); 
         }
 
+        // --- Message Box Function ---
+        const messageBox = document.getElementById('messageBox');
+        let messageTimeout = null;
+
+        function showMessage(message, type = 'info') {
+            if (messageTimeout) {
+                clearTimeout(messageTimeout);
+            }
+            messageBox.textContent = message;
+            messageBox.className = ''; // Clear existing classes
+            messageBox.classList.add('show');
+
+            if (type === 'success') {
+                messageBox.style.backgroundColor = '#10B981'; // Green
+            } else if (type === 'error') {
+                messageBox.style.backgroundColor = '#EF4444'; // Red
+            } else {
+                messageBox.style.backgroundColor = '#333'; // Default dark
+            }
+
+            messageTimeout = setTimeout(() => {
+                messageBox.classList.remove('show');
+            }, 3000); // Message disappears after 3 seconds
+        }
+
+        // --- NEW: Create Folder Logic ---
+        function showCreateFolderModal(type) {
+            folderCreationType = type;
+            createFolderModalTitle.textContent = `Create New Folder`;
+            newFolderNameInput.value = ''; // Clear previous input
+            newFolderNameInput.placeholder = `Enter folder name`;
+            createFolderModalOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            newFolderNameInput.focus(); // Focus on the input field
+        }
+
+        async function handleCreateFolder() {
+            const folderName = newFolderNameInput.value.trim();
+            if (!folderName) {
+                showMessage("Folder name cannot be empty.", "error");
+                return;
+            }
+
+            let parentPath = currentPath;
+
+            try {
+                const response = await fetch('/api/create_folder', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        parent_path: parentPath,
+                        folder_name: folderName
+                    }),
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    showMessage(result.message, 'success');
+                    hideCreateFolderModal();
+                    await handlePostActionRefresh(); // Refresh the relevant section
+                } else {
+                    showMessage(`Error creating folder: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error creating folder:', error);
+                showMessage(`An unexpected error occurred: ${error.message}`, 'error');
+            }
+        }
+
+        function hideCreateFolderModal() {
+            createFolderModalOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Event listeners for Create Folder modal buttons
+        confirmCreateFolderBtn.addEventListener('click', handleCreateFolder);
+        cancelCreateFolderBtn.addEventListener('click', hideCreateFolderModal);
+        newFolderNameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                handleCreateFolder();
+            }
+        });
+
+        // --- NEW: Upload Logic ---
+        function handleUploadClick() {
+            fileInput.click(); // Trigger the hidden file input click
+        }
+
+        fileInput.addEventListener('change', (event) => {
+            filesToUpload = Array.from(event.target.files);
+            if (filesToUpload.length > 0) {
+                showUploadProgressModal();
+                updateUploadList();
+                // Reset file input value to allow selecting same files again if needed
+                fileInput.value = ''; 
+            }
+        });
+
+        function showUploadProgressModal() {
+            uploadProgressModalOverlay.classList.add('active');
+            document.body.style.overflow = '';
+            overallProgressBar.style.width = '0%';
+            overallProgressText.textContent = '0% Complete';
+            startUploadBtn.classList.remove('hidden'); // Show start upload button
+            cancelUploadBtn.textContent = 'Close'; // Change cancel to close
+            uploadedFilesCount = 0; // Reset count
+
+            let targetPathDisplay = currentPath.length > 0 ? currentPath.join('/') : 'root';
+            uploadTargetFolderInfo.textContent = `Target Folder: ${targetPathDisplay}`;
+        }
+
+        function hideUploadProgressModal() {
+            uploadProgressModalOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+            filesToUpload = []; // Clear files
+            uploadList.innerHTML = ''; // Clear list
+            overallProgressBar.style.width = '0%';
+            overallProgressText.textContent = '0% Complete';
+        }
+
+        function updateUploadList() {
+            uploadList.innerHTML = '';
+            if (filesToUpload.length === 0) {
+                uploadList.innerHTML = '<li>No files selected.</li>';
+                startUploadBtn.classList.add('hidden');
+            } else {
+                filesToUpload.forEach(file => {
+                    const li = document.createElement('li');
+                    li.textContent = file.name;
+                    uploadList.appendChild(li);
+                });
+                startUploadBtn.classList.remove('hidden');
+            }
+        }
+
+        async function startFileUpload() {
+            if (filesToUpload.length === 0) {
+                showMessage("No files to upload.", "info");
+                return;
+            }
+
+            startUploadBtn.disabled = true; // Disable button during upload
+            cancelUploadBtn.textContent = 'Close'; // Change cancel to close
+            uploadedFilesCount = 0;
+
+            for (const file of filesToUpload) {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('current_path', JSON.stringify(currentPath)); // Send current path as JSON string
+
+                try {
+                    const response = await fetch('/api/upload_file', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    const result = await response.json();
+                    if (response.ok) {
+                        uploadedFilesCount++;
+                        const progress = (uploadedFilesCount / filesToUpload.length) * 100;
+                        overallProgressBar.style.width = `${progress}%`;
+                        overallProgressText.textContent = `${Math.round(progress)}% Complete (${uploadedFilesCount}/${filesToUpload.length} files)`;
+                        console.log(`Uploaded ${file.name}: ${result.message}`);
+                    } else {
+                        console.error(`Failed to upload ${file.name}: ${result.error}`);
+                        showMessage(`Failed to upload ${file.name}: ${result.error}`, 'error');
+                    }
+                } catch (error) {
+                    console.error(`Error uploading ${file.name}:`, error);
+                    showMessage(`Error uploading ${file.name}: ${error.message}`, 'error');
+                }
+            }
+
+            startUploadBtn.disabled = false; // Re-enable button
+            showMessage(`Upload complete! ${uploadedFilesCount} of ${filesToUpload.length} files uploaded.`, 'success');
+            hideUploadProgressModal(); // Close modal after upload
+            await handlePostActionRefresh(); // Refresh gallery
+        }
+
+        // Drag and Drop Event Handlers
+        galleryContainer.addEventListener('dragover', (e) => {
+            e.preventDefault(); // Prevent default to allow drop
+            // Only add drag-over class if not in trash
+            if (!currentPath.includes(TRASH_FOLDER_NAME)) {
+                galleryContainer.classList.add('drag-over');
+            }
+        });
+
+        galleryContainer.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            galleryContainer.classList.remove('drag-over');
+        });
+
+        galleryContainer.addEventListener('drop', (e) => {
+            e.preventDefault();
+            galleryContainer.classList.remove('drag-over');
+            // Only allow drop if not in trash
+            if (currentPath.includes(TRASH_FOLDER_NAME)) {
+                showMessage("Cannot upload files to the Trash folder.", "error");
+                return;
+            }
+            filesToUpload = Array.from(e.dataTransfer.files);
+            if (filesToUpload.length > 0) {
+                showUploadProgressModal();
+                updateUploadList();
+            }
+        });
+
+        // Event listeners for Upload functionality
+        uploadFilesBtn.addEventListener('click', handleUploadClick);
+        startUploadBtn.addEventListener('click', startFileUpload);
+        cancelUploadBtn.addEventListener('click', hideUploadProgressModal);
+
 
         // Initial load: Start by showing years
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             // Apply saved theme on load
             const savedTheme = localStorage.getItem('theme') || 'dark'; // Default to dark
             setTheme(savedTheme);
@@ -2036,7 +2729,8 @@
                 setTheme(newTheme);
             });
 
-            loadYears();
+            await loadTopLevelFolders();
+            updateBreadcrumb(); // MODIFIED: Call updateBreadcrumb on initial load
         });
     </script>
 </body>
