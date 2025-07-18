@@ -17,25 +17,34 @@
         }
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #1a202c; /* Dark background for the body */
-            color: #e2e8f0; /* Light text color for contrast */
+            transition: background-color 0.3s ease, color 0.3s ease; /* Smooth transition for theme change */
             display: flex; /* Use flexbox to make body a flex container */
             flex-direction: column; /* Stack items vertically */
             padding: 1rem; /* Add padding to body, which will be the margin for the container */
+        }
+        /* Default Dark Theme */
+        body[data-theme='dark'] {
+            background-color: #1a202c; /* Dark background for the body */
+            color: #e2e8f0; /* Light text color for contrast */
         }
         .container {
             min-width: calc(100vw - 3rem); /* Updated to 100vw - 3rem as per your request */
             min-height: auto;/*calc(100vh - 2rem); /* Set min-height to fill viewport, accounting for body padding */
             margin: 0 auto; /* Center horizontally */
             padding: 1.5rem;
-            background-color: #2d3748; /* Slightly lighter dark background for the container */
             border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); /* Stronger shadow for dark theme */
             flex-grow: 1; /* Allow container to grow and fill available space within body */
             display: flex; /* Use flexbox for internal layout */
             flex-direction: column; /* Stack internal content vertically */
             position: relative; /* Added to make absolute positioning of children relative to it */
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
         }
+        /* Container Dark Theme */
+        body[data-theme='dark'] .container {
+            background-color: #2d3748; /* Slightly lighter dark background for the container */
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); /* Stronger shadow for dark theme */
+        }
+
         /* Specific max-width for very large screens */
         @media (min-width: 1536px) {
             .container {
@@ -46,19 +55,22 @@
         .nav-link {
             padding: 0.4rem 0.8rem; /* Compact padding */
             margin: 0.2rem; /* Compact margin */
-            background-color: #4a5568; /* Darker grey for links */
-            color: #e2e8f0; /* Light text for links */
             border-radius: 8px;
             text-decoration: none;
             font-weight: 600;
-            transition: background-color 0.2s, transform 0.1s;
+            transition: background-color 0.2s, transform 0.1s, color 0.2s;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
             display: inline-flex; /* Use inline-flex for horizontal alignment */
             align-items: center; /* Vertically center content */
             justify-content: center; /* Horizontally center content */
             white-space: nowrap; /* Prevent wrapping within the nav-link itself */
         }
-        .nav-link:hover {
+        /* Nav-link Dark Theme */
+        body[data-theme='dark'] .nav-link {
+            background-color: #4a5568; /* Darker grey for links */
+            color: #e2e8f0; /* Light text for links */
+        }
+        body[data-theme='dark'] .nav-link:hover {
             background-color: #6a768f; /* Lighter grey on hover */
             color: #fff; /* Changed text color to white on hover */
             transform: translateY(-2px);
@@ -82,12 +94,15 @@
         .gallery-item {
             border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Added shadow to thumbnails */
             transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
             cursor: pointer; /* Indicate clickable */
             position: relative; /* For play icon overlay and delete button */
         }
-        .gallery-item:hover {
+        /* Gallery-item Dark Theme */
+        body[data-theme='dark'] .gallery-item {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Added shadow to thumbnails */
+        }
+        body[data-theme='dark'] .gallery-item:hover {
             transform: scale(1.03);
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5); /* Enhanced shadow on hover */
         }
@@ -100,20 +115,28 @@
         .section-title {
             font-size: 1.8rem;
             font-weight: 700;
-            color: #cbd5e0; /* Lighter text for titles */
             margin-bottom: 1.5rem;
             text-align: center;
+            transition: color 0.3s ease;
+        }
+        /* Section-title Dark Theme */
+        body[data-theme='dark'] .section-title {
+            color: #cbd5e0; /* Lighter text for titles */
         }
         .breadcrumb {
             margin-bottom: 1.5rem;
             font-size: 1rem;
-            color: #a0aec0; /* Lighter grey for breadcrumb */
             display: flex; /* Use flexbox for breadcrumb content */
             flex-wrap: wrap; /* Allow wrapping on smaller screens */
             align-items: center; /* Align items vertically */
             justify-content: space-between; /* Space between path and buttons */
             gap: 1rem; /* Gap between breadcrumb path and buttons */
             position: relative; /* Added for absolute positioning of its child */
+            transition: color 0.3s ease;
+        }
+        /* Breadcrumb Dark Theme */
+        body[data-theme='dark'] .breadcrumb {
+            color: #a0aec0; /* Lighter grey for breadcrumb */
         }
         .breadcrumb-path-container {
             display: flex;
@@ -126,9 +149,13 @@
         /* Style for the breadcrumb separator */
         .breadcrumb-separator {
             margin: 0 0.2rem; /* Space around the separator */
-            color: #e2e8f0 !important; /* White and important */
             font-weight: normal; /* Ensure it's not bold */
             font-size: 1rem; /* Made arrows 2x bigger */
+            transition: color 0.3s ease;
+        }
+        /* Breadcrumb-separator Dark Theme */
+        body[data-theme='dark'] .breadcrumb-separator {
+            color: #e2e8f0 !important; /* White and important */
         }
         /* Custom scrollbar for gallery */
         .gallery-grid {
@@ -167,14 +194,17 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.95); /* Even darker background for lightbox */
             display: flex;
             justify-content: center;
             align-items: center;
             z-index: 1000; /* Ensure it's on top */
             opacity: 0;
             visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
+            transition: opacity 0.3s ease, visibility 0.3s ease, background-color 0.3s ease;
+        }
+        /* Lightbox-overlay Dark Theme */
+        body[data-theme='dark'] .lightbox-overlay {
+            background-color: rgba(0, 0, 0, 0.95); /* Even darker background for lightbox */
         }
         .lightbox-overlay.active {
             opacity: 1;
@@ -217,18 +247,21 @@
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            background-color: rgba(255, 255, 255, 0.1); /* Lighter background for arrows */
-            color: white;
             padding: 1rem 0.8rem;
             cursor: pointer;
             font-size: 2rem;
             border-radius: 8px;
             user-select: none; /* Prevent text selection */
             opacity: 0;
-            transition: opacity 0.2s ease, background-color 0.2s ease;
+            transition: opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease;
             z-index: 1010; /* Above the media */
         }
-        .lightbox-nav-arrow:hover {
+        /* Lightbox-nav-arrow Dark Theme */
+        body[data-theme='dark'] .lightbox-nav-arrow {
+            background-color: rgba(255, 255, 255, 0.1); /* Lighter background for arrows */
+            color: white;
+        }
+        body[data-theme='dark'] .lightbox-nav-arrow:hover {
             background-color: rgba(255, 255, 255, 0.2); /* Lighter on hover */
         }
         .lightbox-overlay:hover .lightbox-nav-arrow {
@@ -251,15 +284,18 @@
             cursor: pointer;
             z-index: 1010;
             opacity: 0.7;
-            transition: opacity 0.2s ease, background-color 0.2s ease;
+            transition: opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease;
             padding: 0;
             border: none;
-            color: #e2e8f0; /* Light text color for icons */
-            background-color: rgba(255, 255, 255, 0.1); /* Light background for close button */
             font-size: 2.5rem; /* Match original size */
             font-weight: normal; /* Ensure it's not bold */
         }
-        .lightbox-close-btn:hover {
+        /* Lightbox-close-btn Dark Theme */
+        body[data-theme='dark'] .lightbox-close-btn {
+            color: #e2e8f0; /* Light text color for icons */
+            background-color: rgba(255, 255, 255, 0.1); /* Light background for close button */
+        }
+        body[data-theme='dark'] .lightbox-close-btn:hover {
             opacity: 1;
             background-color: rgba(255, 255, 255, 0.2);
         }
@@ -324,14 +360,17 @@
             cursor: pointer;
             z-index: 1010;
             opacity: 0.7;
-            transition: opacity 0.2s ease, background-color 0.2s ease;
+            transition: opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease;
             padding: 0;
             border: none;
-            color: #e2e8f0; /* Light text color for icons */
-            background-color: rgba(79, 70, 229, 0.4); /* Default blue background for slideshow */
             box-shadow: none; /* No shadow */
         }
-        .circular-action-btn:hover {
+        /* Circular-action-btn Dark Theme */
+        body[data-theme='dark'] .circular-action-btn {
+            color: #e2e8f0; /* Light text color for icons */
+            background-color: rgba(79, 70, 229, 0.4); /* Default blue background for slideshow */
+        }
+        body[data-theme='dark'] .circular-action-btn:hover {
             opacity: 1;
             background-color: rgba(79, 70, 229, 0.8); /* Darker blue on hover */
         }
@@ -381,18 +420,26 @@
             visibility: visible;
         }
         .confirmation-modal-content {
-            background-color: #2d3748;
             padding: 2rem;
             border-radius: 12px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
             text-align: center;
             max-width: 400px;
             width: 90%;
+            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+        }
+        /* Confirmation-modal-content Dark Theme */
+        body[data-theme='dark'] .confirmation-modal-content {
+            background-color: #2d3748;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
             color: #e2e8f0;
         }
         .confirmation-modal-content h3 {
             font-size: 1.5rem;
             margin-bottom: 1rem;
+            transition: color 0.3s ease;
+        }
+        /* Confirmation-modal-content h3 Dark Theme */
+        body[data-theme='dark'] .confirmation-modal-content h3 {
             color: #cbd5e0;
         }
         .confirmation-modal-content p {
@@ -409,7 +456,7 @@
             border-radius: 8px;
             font-weight: 600;
             cursor: pointer;
-            transition: background-color 0.2s ease;
+            transition: background-color 0.2s ease, color 0.2s ease;
         }
         .confirmation-modal-buttons .confirm-btn {
             background-color: #dc2626; /* Red */
@@ -419,18 +466,26 @@
             background-color: #ef4444; /* Lighter red */
         }
         .confirmation-modal-buttons .cancel-btn {
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        /* Confirmation-modal-buttons cancel-btn Dark Theme */
+        body[data-theme='dark'] .confirmation-modal-buttons .cancel-btn {
             background-color: #4a5568; /* Darker grey */
             color: #e2e8f0;
         }
-        .confirmation-modal-buttons .cancel-btn:hover {
+        body[data-theme='dark'] .confirmation-modal-buttons .cancel-btn:hover {
             background-color: #6a768f; /* Lighter grey */
         }
 
         /* New style for Trash button in year navigation */
         .trash-nav-link {
+            transition: background-color 0.2s ease;
+        }
+        /* Trash-nav-link Dark Theme */
+        body[data-theme='dark'] .trash-nav-link {
             background-color: #6b7280; /* A darker grey, slightly different from regular nav-link */
         }
-        .trash-nav-link:hover {
+        body[data-theme='dark'] .trash-nav-link:hover {
             background-color: #4b5563; /* Even darker on hover */
         }
 
@@ -458,18 +513,22 @@
             top: 20px; /* Adjusted from -40px to 20px to make it visible */
             left: 50%;
             transform: translateX(-50%);
-            color: rgba(255, 255, 255, 0.8);
             font-size: 0.9rem; /* Small font size */
             font-weight: 500;
-            text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
             z-index: 1010; /* Above media, below close/delete buttons */
             max-width: calc(100% - 100px); /* Limit width to prevent overlap with buttons on both sides */
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            transition: color 0.3s ease, text-shadow 0.3s ease;
+        }
+        /* LightboxFilename Dark Theme */
+        body[data-theme='dark'] #lightboxFilename {
+            color: rgba(255, 255, 255, 0.8);
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
         }
         /* Icon styling for play/pause buttons */
-        .play_icon, .pause_icon {
+        .play_icon, .pause_icon, .light_mode_icon, .dark_mode_icon {
             width: 100%;
             height: 100%;
             display: flex;
@@ -494,9 +553,13 @@
         /* Style for the item count text */
         .item-count {
             font-size: 0.7rem; /* Even smaller font size for count */
-            color: #a0aec0; /* Lighter grey for count text */
             margin-top: 0.1rem; /* Even smaller margin above the count */
             line-height: 1; /* Ensure minimal line height */
+            transition: color 0.3s ease;
+        }
+        /* Item-count Dark Theme */
+        body[data-theme='dark'] .item-count {
+            color: #a0aec0; /* Lighter grey for count text */
         }
 
         /* New CSS for fade-in effect on thumbnails */
@@ -549,13 +612,18 @@
         }
         .loading-spinner .material-icons {
             font-size: 4rem; /* Large icon */
-            color: #333333; /* Blue color */
             animation: spin 1.5s linear infinite; /* Spin animation */
+            transition: color 0.3s ease;
         }
         .loading-spinner p {
             margin-top: 1rem;
             font-size: 1.2rem;
-            color: #333333;
+            transition: color 0.3s ease;
+        }
+        /* Loading-spinner Dark Theme */
+        body[data-theme='dark'] .loading-spinner .material-icons,
+        body[data-theme='dark'] .loading-spinner p {
+            color: #333333; /* Blue color */
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -574,6 +642,110 @@
             max-width: 90vw;
             max-height: 90vh;            
         }
+
+        /* --- Light Theme Overrides --- */
+        body[data-theme='light'] {
+            background-color: #f7fafc; /* Light background */
+            color: #2d3748; /* Dark text */
+        }
+        body[data-theme='light'] .container {
+            background-color: #ffffff;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        body[data-theme='light'] .nav-link {
+            background-color: #e2e8f0;
+            color: #4a5568;
+        }
+        body[data-theme='light'] .nav-link:hover {
+            background-color: #cbd5e0;
+            color: #2d3748;
+        }
+        body[data-theme='light'] .section-title {
+            color: #2d3748;
+        }
+        body[data-theme='light'] .breadcrumb {
+            color: #718096;
+        }
+        body[data-theme='light'] .breadcrumb-separator {
+            color: #4a5568 !important;
+        }
+        body[data-theme='light'] .gallery-item {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* Slight shadow for light theme tiles */
+        }
+        body[data-theme='light'] .gallery-item:hover {
+            transform: scale(1.03);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5); /* Enhanced shadow on hover */
+        }
+        body[data-theme='light'] .lightbox-overlay {
+            background-color: rgba(255, 255, 255, 0.95); /* Lighter background for lightbox */
+        }
+        body[data-theme='light'] .lightbox-nav-arrow {
+            background-color: rgba(0, 0, 0, 0.1);
+            color: black;
+        }
+        body[data-theme='light'] .lightbox-nav-arrow:hover {
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+        body[data-theme='light'] .lightbox-close-btn {
+            background-color: rgba(0, 0, 0, 0.1);
+            color: #2d3748;
+        }
+        body[data-theme='light'] .lightbox-close-btn:hover {
+            opacity: 1;
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+        body[data-theme='light'] .circular-action-btn {
+            background-color: rgba(79, 70, 229, 0.2); /* Lighter blue for light theme */
+            color: #2d3748;
+        }
+        body[data-theme='light'] .circular-action-btn:hover {
+            background-color: rgba(79, 70, 229, 0.5);
+        }
+        body[data-theme='light'] .trash-delete-btn-style {
+            background-color: rgba(220, 38, 38, 0.2);
+        }
+        body[data-theme='light'] .trash-delete-btn-style:hover {
+            background-color: rgba(220, 38, 38, 0.5);
+        }
+        body[data-theme='light'] .trash-restore-btn-style {
+            background-color: rgba(52, 211, 153, 0.2);
+        }
+        body[data-theme='light'] .trash-restore-btn-style:hover {
+            background-color: rgba(52, 211, 153, 0.5);
+        }
+        body[data-theme='light'] .confirmation-modal-content {
+            background-color: #ffffff;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            color: #2d3748;
+        }
+        body[data-theme='light'] .confirmation-modal-content h3 {
+            color: #2d3748;
+        }
+        body[data-theme='light'] .confirmation-modal-buttons .cancel-btn {
+            background-color: #e2e8f0;
+            color: #4a5568;
+        }
+        body[data-theme='light'] .confirmation-modal-buttons .cancel-btn:hover {
+            background-color: #cbd5e0;
+            color: #2d3748;
+        }
+        body[data-theme='light'] .loading-spinner .material-icons,
+        body[data-theme='light'] .loading-spinner p {
+            color: #a0aec0; /* Lighter grey for spinner in light theme */
+        }
+        body[data-theme='light'] #lightboxFilename {
+            color: rgba(0, 0, 0, 0.8);
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+        }
+        body[data-theme='light'] .item-count {
+            color: #718096;
+        }
+        body[data-theme='light'] .trash-nav-link {
+            background-color: #a0aec0;
+        }
+        body[data-theme='light'] .trash-nav-link:hover {
+            background-color: #cbd5e0;
+        }
     </style>
 </head>
 <body>
@@ -581,6 +753,11 @@
         <h1 class="text-4xl font-extrabold text-center text-gray-300 mb-8">Image/Video Gallery Browser</h1>
         <!-- Action buttons container for breadcrumb area -->
         <div id="breadcrumbActionButtonsContainer">
+            <!-- Theme Toggle button for breadcrumb area -->
+            <button id="themeToggleButton" class="circular-action-btn slideshow-btn-style" title="Toggle Theme">
+                <i class="material-icons light_mode_icon">light_mode</i>
+                <i class="material-icons dark_mode_icon hidden">dark_mode</i>
+            </button>
             <!-- Slideshow button for breadcrumb area -->
             <button id="slideshowBtnBreadcrumb" class="circular-action-btn slideshow-btn-style hidden" title="Start/Pause Slideshow">
                 <i class="material-icons play_icon">play_circle_outline</i>
@@ -740,6 +917,25 @@
 
         let fileToProcessPath = ''; // Stores the full relative path of the file to be moved/deleted/restored
         let spinnerTimeout = null; // To hold the timeout ID for the spinner
+
+        // Theme Toggle Button
+        const themeToggleButton = document.getElementById('themeToggleButton');
+
+        // Function to set the theme
+        function setTheme(theme) {
+            document.body.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            // Update button icon
+            const lightIcon = themeToggleButton.querySelector('.light_mode_icon');
+            const darkIcon = themeToggleButton.querySelector('.dark_mode_icon');
+            if (theme === 'dark') {
+                lightIcon.classList.remove('hidden');
+                darkIcon.classList.add('hidden');
+            } else {
+                lightIcon.classList.add('hidden');
+                darkIcon.classList.remove('hidden');
+            }
+        }
 
         // Intersection Observer for lazy loading images
         const lazyLoadObserver = new IntersectionObserver((entries, observer) => {
@@ -1690,7 +1886,7 @@
                 }
             } catch (error) {
                 console.error("Error during file action:", error);
-                alert(`Error performing action: ${error.message}`); 
+                alert(`An unexpected error occurred: ${error.message}`); 
             }
 
             if (actionSuccessful) {
@@ -1812,7 +2008,20 @@
 
 
         // Initial load: Start by showing years
-        document.addEventListener('DOMContentLoaded', loadYears);
+        document.addEventListener('DOMContentLoaded', () => {
+            // Apply saved theme on load
+            const savedTheme = localStorage.getItem('theme') || 'dark'; // Default to dark
+            setTheme(savedTheme);
+
+            // Event listener for theme toggle button
+            themeToggleButton.addEventListener('click', () => {
+                const currentTheme = document.body.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                setTheme(newTheme);
+            });
+
+            loadYears();
+        });
     </script>
 </body>
 </html>
