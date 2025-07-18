@@ -1187,6 +1187,13 @@
                 <i class="material-icons play_icon">play_circle_outline</i>
                 <i class="material-icons pause_icon hidden">pause_circle_outline</i>
             </button>
+            <!-- MODIFIED: Added Empty Trash and Restore All buttons -->
+            <button id="restoreAllBtn" class="circular-action-btn trash-restore-btn-style hidden" title="Restore All Files">
+                <i class="material-icons">restore_from_trash</i>
+            </button>
+            <button id="emptyTrashBtn" class="circular-action-btn trash-delete-btn-style hidden" title="Empty Trash">
+                <i class="material-icons">delete_forever</i>
+            </button>
         </div>
 
         <div class="breadcrumb mb-6 flex items-center justify-center"> <!-- Removed text-center and justify-between, added justify-center -->
@@ -1342,6 +1349,8 @@
         const trashDeleteBtn = document.getElementById('trashDeleteBtn'); // This is now the single delete button in lightbox
         const trashRestoreBtn = document.getElementById('trashRestoreBtn'); // This is now the single restore button in lightbox
         const downloadRawBtn = document.getElementById('downloadRawBtn'); // NEW: Download RAW button
+        const emptyTrashBtn = document.getElementById('emptyTrashBtn'); // NEW: Empty Trash button
+        const restoreAllBtn = document.getElementById('restoreAllBtn'); // NEW: Restore All button
 
         // Lightbox elements
         const lightboxOverlay = document.getElementById('lightboxOverlay');
@@ -1413,14 +1422,9 @@
         function updateActionButtonsVisibility() {
             const isLightboxActive = lightboxOverlay.classList.contains('active');
             const isViewingTrash = currentPath.includes(TRASH_FOLDER_NAME);
-            // MODIFIED: Show slideshow button if in any gallery view (year, month, or day)
-            const isGalleryView = !gallerySection.classList.contains('hidden') || !subFoldersSection.classList.contains('hidden');
-            const hasMediaInCurrentFolder = currentDisplayedMedia.length > 0;
-            const isRawFile = currentDisplayedMedia[currentMediaIndex] && RAW_EXTENSIONS.includes('.' + currentDisplayedMedia[currentMediaIndex].filename.split('.').pop().toLowerCase());
-
-
-            // Slideshow buttons
-            if (isGalleryView && hasMediaInCurrentFolder && !isViewingTrash) {
+            
+            // MODIFIED: Simplified the logic to show the slideshow button
+            if (!isViewingTrash) {
                 slideshowBtnBreadcrumb.classList.remove('hidden');
             } else {
                 slideshowBtnBreadcrumb.classList.add('hidden');
@@ -1437,6 +1441,7 @@
                     trashRestoreBtn.classList.add('hidden');
                 }
                 // Download RAW button in lightbox
+                const isRawFile = currentDisplayedMedia[currentMediaIndex] && RAW_EXTENSIONS.includes('.' + currentDisplayedMedia[currentMediaIndex].filename.split('.').pop().toLowerCase());
                 if (isRawFile && !isViewingTrash) {
                     downloadRawBtn.classList.remove('hidden');
                 } else {
@@ -1454,6 +1459,15 @@
                 uploadFilesBtn.classList.add('hidden');
             } else {
                 uploadFilesBtn.classList.remove('hidden');
+            }
+
+            // MODIFIED: Show/hide bulk trash action buttons
+            if (isViewingTrash) {
+                emptyTrashBtn.classList.remove('hidden');
+                restoreAllBtn.classList.remove('hidden');
+            } else {
+                emptyTrashBtn.classList.add('hidden');
+                restoreAllBtn.classList.add('hidden');
             }
 
             updateSlideshowControls(); // Ensure slideshow icons are correct
@@ -2072,8 +2086,7 @@
                 let pathSegmentsForApi = [...currentPath]; // Copy currentPath to modify for API call
 
                 if (currentPath.length === 0) {
-                    showMessage('Please navigate into a folder to start a slideshow.', 'info');
-                    return;
+                    apiUrl = `/api/recursive_media`;
                 } else {
                     apiUrl = `/api/recursive_media/${pathSegmentsForApi.join('/')}`;
                 }
@@ -2235,47 +2248,57 @@
 
         // --- Confirmation Modal Functions ---
         // Unified function for file and folder deletion/restoration
-        function showConfirmationModal(filePathOrFolderArray, isPermanentDelete = false, isRestore = false) {
-            isFolderDeletion = Array.isArray(filePathOrFolderArray); // Check if it's an array (folder path)
-            if (isFolderDeletion) {
-                folderToProcessPath = filePathOrFolderArray;
-                fileToProcessPath = ''; // Clear file path
-            } else {
-                fileToProcessPath = filePathOrFolderArray;
-                folderToProcessPath = []; // Clear folder path
-            }
-
-            if (isRestore) {
-                confirmationMessage.textContent = "Are you sure you want to restore this file to its original location?";
-                confirmActionBtn.textContent = "Restore";
+        function showConfirmationModal(actionTarget, isPermanentDelete = false, isRestore = false) {
+            if (actionTarget === 'empty_trash') {
+                isFolderDeletion = false;
+                fileToProcessPath = 'empty_trash'; // Use a special string
+                confirmationMessage.textContent = "Are you sure you want to permanently delete ALL items in the trash? This action cannot be undone.";
+                confirmActionBtn.textContent = "Empty Trash";
+                confirmActionBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+                confirmActionBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+            } else if (actionTarget === 'restore_all') {
+                isFolderDeletion = false;
+                fileToProcessPath = 'restore_all'; // Use a special string
+                confirmationMessage.textContent = "Are you sure you want to restore ALL items from the trash to their original locations?";
+                confirmActionBtn.textContent = "Restore All";
                 confirmActionBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
                 confirmActionBtn.classList.add('bg-green-500', 'hover:bg-green-600');
-            } else if (isPermanentDelete) {
-                confirmationMessage.textContent = "Are you sure you want to permanently delete this file? This action cannot be undone.";
-                confirmActionBtn.textContent = "Delete Forever";
-                confirmActionBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
-                confirmActionBtn.classList.add('bg-red-600', 'hover:bg-red-700');
-            } else if (isFolderDeletion) { // New condition for folder deletion
-                const folderName = folderToProcessPath.join('/'); // Use folderToProcessPath directly
-                confirmationMessage.textContent = `Are you sure you want to delete the folder "${folderName}" and move all its contents (including all subfolders and their media) to Trash?`;
-                confirmActionBtn.textContent = "Delete Folder";
-                confirmActionBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
-                confirmActionBtn.classList.add('bg-red-600', 'hover:bg-red-700');
-            }
-            else { // Default to move file to trash
-                confirmationMessage.textContent = "Are you sure you want to move this file to Trash? It can be restored later from the Trash folder.";
-                confirmActionBtn.textContent = "Move to Trash";
-                confirmActionBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
-                confirmActionBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+            } else {
+                isFolderDeletion = Array.isArray(actionTarget);
+                if (isFolderDeletion) {
+                    folderToProcessPath = actionTarget;
+                    fileToProcessPath = '';
+                } else {
+                    fileToProcessPath = actionTarget;
+                    folderToProcessPath = [];
+                }
+
+                if (isRestore) {
+                    confirmationMessage.textContent = "Are you sure you want to restore this file to its original location?";
+                    confirmActionBtn.textContent = "Restore";
+                    confirmActionBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                    confirmActionBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+                } else if (isPermanentDelete) {
+                    confirmationMessage.textContent = "Are you sure you want to permanently delete this file? This action cannot be undone.";
+                    confirmActionBtn.textContent = "Delete Forever";
+                    confirmActionBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+                    confirmActionBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                } else if (isFolderDeletion) {
+                    const folderName = folderToProcessPath.join('/');
+                    confirmationMessage.textContent = `Are you sure you want to delete the folder "${folderName}" and move all its contents to Trash?`;
+                    confirmActionBtn.textContent = "Delete Folder";
+                    confirmActionBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+                    confirmActionBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                } else {
+                    confirmationMessage.textContent = "Are you sure you want to move this file to Trash?";
+                    confirmActionBtn.textContent = "Move to Trash";
+                    confirmActionBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+                    confirmActionBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                }
             }
 
             confirmationModalOverlay.classList.add('active');
             document.body.style.overflow = 'hidden'; 
-        }
-
-        // New function for folder deletion confirmation (this will call showConfirmationModal)
-        function showFolderDeletionConfirmation(folderPathArray) {
-            showConfirmationModal(folderPathArray, false, false); // Pass array, not permanent, not restore
         }
 
         function hideConfirmationModal() {
@@ -2329,7 +2352,13 @@
 
             let actionSuccessful = false;
             try {
-                if (confirmActionBtn.textContent === "Delete Folder") {
+                if (confirmActionBtn.textContent === "Empty Trash") {
+                    await emptyTrash();
+                    actionSuccessful = true;
+                } else if (confirmActionBtn.textContent === "Restore All") {
+                    await restoreAll();
+                    actionSuccessful = true;
+                } else if (confirmActionBtn.textContent === "Delete Folder") {
                     await deleteFolder(folderToProcessPath);
                     actionSuccessful = true;
                 } else if (confirmActionBtn.textContent === "Restore") { 
@@ -2470,6 +2499,39 @@
             } catch (error) {
                 console.error('Network or unexpected error during folder deletion:', error);
                 throw error; // Re-throw to be caught by caller
+            }
+        }
+
+        // --- NEW: Bulk Trash Actions ---
+        async function emptyTrash() {
+            try {
+                const response = await fetch('/api/empty_trash', { method: 'POST' });
+                if (response.ok) {
+                    showMessage('Trash emptied successfully.', 'success');
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error);
+                }
+            } catch (error) {
+                console.error('Error emptying trash:', error);
+                showMessage(`Error emptying trash: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        async function restoreAll() {
+            try {
+                const response = await fetch('/api/restore_all', { method: 'POST' });
+                if (response.ok) {
+                    showMessage('All files restored successfully.', 'success');
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error);
+                }
+            } catch (error) {
+                console.error('Error restoring all files:', error);
+                showMessage(`Error restoring all files: ${error.message}`, 'error');
+                throw error;
             }
         }
 
@@ -2714,6 +2776,10 @@
         uploadFilesBtn.addEventListener('click', handleUploadClick);
         startUploadBtn.addEventListener('click', startFileUpload);
         cancelUploadBtn.addEventListener('click', hideUploadProgressModal);
+
+        // MODIFIED: Added listeners for bulk trash actions
+        emptyTrashBtn.addEventListener('click', () => showConfirmationModal('empty_trash'));
+        restoreAllBtn.addEventListener('click', () => showConfirmationModal('restore_all'));
 
 
         // Initial load: Start by showing years

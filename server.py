@@ -24,27 +24,10 @@ register_heif_opener()
 
 app = Flask(__name__)
 
-# the port the Flask Server will listen on
-PORT=8080
-MEDIA_LIBRARY_PATH = '/Volumes/aa3025_bkp/Photos_Backup'
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # --- Configuration ---
 # IMPORTANT: Set this to the ABSOLUTE path of your main photo library folder.
 # Example: If your photos are in '/Users/YourUser/Pictures/MyGallery', set BASE_DIR to that.
-image_library_root = os.path.abspath(MEDIA_LIBRARY_PATH) # User should update this!
+image_library_root = os.path.abspath('/Volumes/aa3025_bkp/Photos_Backup') # User should update this!
 
 TRASH_FOLDER_NAME = '_Trash' # Must match frontend
 TRASH_ROOT = os.path.join(image_library_root, TRASH_FOLDER_NAME) # Absolute path to trash
@@ -475,10 +458,12 @@ def get_thumbnail(relative_path):
         print(f"ERROR: get_thumbnail - Thumbnail generation failed or unsupported type for {full_media_path}")
         return jsonify({"error": "Thumbnail generation failed or unsupported type"}), 500
 
+# MODIFIED: Added a default path to handle root slideshow
+@app.route('/api/recursive_media', defaults={'path_segments': ''})
 @app.route('/api/recursive_media/<path:path_segments>')
 def get_recursive_media(path_segments):
     """Returns all media files recursively from a given path."""
-    full_path_segments = path_segments.split('/')
+    full_path_segments = path_segments.split('/') if path_segments else []
     base_dir = os.path.abspath(os.path.join(image_library_root, *full_path_segments))
 
     if not base_dir.startswith(image_library_root):
@@ -957,7 +942,83 @@ def delete_folder():
         print(f"ERROR: Error deleting folder: {type(e).__name__}: {e}")
         return jsonify({"error": str(e)}), 500
 
+# MODIFIED: Added endpoint to empty the trash
+@app.route('/api/empty_trash', methods=['POST'])
+def empty_trash():
+    """Permanently deletes all files and folders within the trash directory."""
+    try:
+        for item in os.listdir(TRASH_ROOT):
+            full_path = os.path.join(TRASH_ROOT, item)
+            if os.path.isdir(full_path):
+                shutil.rmtree(full_path)
+            else:
+                os.remove(full_path)
+        _update_folder_item_count_meta(TRASH_ROOT)
+        return jsonify({"message": "Trash emptied successfully."})
+    except Exception as e:
+        print(f"ERROR: Error emptying trash: {e}")
+        return jsonify({"error": "Failed to empty trash."}), 500
+
+# MODIFIED: Added endpoint to restore all files from trash
+@app.route('/api/restore_all', methods=['POST'])
+def restore_all():
+    """Restores all files from the trash to their original locations."""
+    try:
+        for filename in os.listdir(TRASH_ROOT):
+            if filename.endswith('.meta'):
+                continue # Skip metadata files in the initial loop
+
+            source_full_path = os.path.join(TRASH_ROOT, filename)
+            if os.path.isfile(source_full_path):
+                # Construct the relative path for the restore_file function
+                relative_path_in_trash = os.path.join(TRASH_FOLDER_NAME, filename)
+                # Reuse the single-file restore logic
+                restore_file_logic(relative_path_in_trash)
+        
+        _update_folder_item_count_meta(TRASH_ROOT) # Final count update
+        return jsonify({"message": "All files have been restored."})
+    except Exception as e:
+        print(f"ERROR: Error during restore all: {e}")
+        return jsonify({"error": "An error occurred during the restore all process."}), 500
+
+def restore_file_logic(file_relative_path_in_trash):
+    """Logic to restore a single file, refactored to be reusable."""
+    source_full_path_in_trash = os.path.abspath(os.path.join(image_library_root, file_relative_path_in_trash))
+    if not os.path.exists(source_full_path_in_trash):
+        raise FileNotFoundError(f"File not found in trash: {source_full_path_in_trash}")
+
+    metadata_file_path = f"{source_full_path_in_trash}.meta"
+    if not os.path.exists(metadata_file_path):
+        raise FileNotFoundError(f"Metadata for file not found: {metadata_file_path}")
+
+    with open(metadata_file_path, 'r') as f:
+        metadata = json.load(f)
+    original_relative_path = metadata.get('original_path')
+    trashed_thumbnail_path = metadata.get('trashed_thumbnail_path')
+    trashed_preview_path = metadata.get('trashed_preview_path')
+
+    if not original_relative_path:
+        raise ValueError("Original path not found in metadata.")
+
+    original_full_path = os.path.abspath(os.path.join(image_library_root, original_relative_path))
+    original_directory = os.path.dirname(original_full_path)
+    os.makedirs(original_directory, exist_ok=True)
+
+    final_restore_path = original_full_path
+    if os.path.exists(original_full_path):
+        base_name, ext = os.path.splitext(original_relative_path)
+        timestamp = datetime.now().strftime("_%Y%m%d%H%M%S")
+        dir_name = os.path.dirname(original_relative_path)
+        new_filename = f"{os.path.basename(base_name)}{timestamp}{ext}"
+        final_restore_path = os.path.abspath(os.path.join(image_library_root, dir_name, new_filename))
+
+    _restore_associated_file(final_restore_path, trashed_thumbnail_path, _get_thumbnail_full_path)
+    _restore_associated_file(final_restore_path, trashed_preview_path, _get_preview_full_path)
+    shutil.move(source_full_path_in_trash, final_restore_path)
+    os.remove(metadata_file_path)
+    _update_folder_item_count_meta(os.path.dirname(final_restore_path))
+
 
 if __name__ == '__main__':
     _initial_scan_and_populate_counts() # Run initial scan on startup
-    app.run(host='0.0.0.0', debug=True, port=PORT)
+    app.run(host='0.0.0.0', debug=True, port=8080)
