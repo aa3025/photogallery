@@ -658,6 +658,10 @@
         <div id="lightboxMediaDisplay">
             <!-- Image or Video will be loaded here -->
             <!-- Loading spinner will be inserted here dynamically -->
+            <div id="loadingSpinner" class="loading-spinner hidden">
+                <i class="material-icons">autorenew</i>
+                <p style="color:#333333;">Converting for preview...</p>
+            </div>
         </div>
         <span id="lightboxNext" class="lightbox-nav-arrow right">&#11157;</span>
     </div>
@@ -726,6 +730,7 @@
         const lightboxNext = document.getElementById('lightboxNext');
         const lightboxClose = document.getElementById('lightboxClose'); // Now a button inside the container
         const lightboxFilename = document.getElementById('lightboxFilename'); 
+        const loadingSpinner = document.getElementById('loadingSpinner'); // Get reference to the spinner
 
         // Confirmation Modal elements
         const confirmationModalOverlay = document.getElementById('confirmationModalOverlay');
@@ -734,6 +739,7 @@
         const confirmationMessage = document.getElementById('confirmationMessage');
 
         let fileToProcessPath = ''; // Stores the full relative path of the file to be moved/deleted/restored
+        let spinnerTimeout = null; // To hold the timeout ID for the spinner
 
         // Intersection Observer for lazy loading images
         const lazyLoadObserver = new IntersectionObserver((entries, observer) => {
@@ -1223,25 +1229,16 @@
 
         // Helper function to show the loading spinner
         function showLoadingSpinner() {
-            // Remove any existing media element before showing spinner
-            const existingMedia = lightboxMediaDisplay.querySelector('.media-display');
-            if (existingMedia) {
-                existingMedia.remove();
-            }
-            lightboxMediaDisplay.innerHTML = `
-                <div class="loading-spinner">
-                    <i class="material-icons">autorenew</i>
-                    <p style="color:#333333;">Converting for preview...</p>
-                </div>
-            `;
+            loadingSpinner.classList.remove('hidden');
         }
 
         // Helper function to hide the loading spinner
         function hideLoadingSpinner() {
-            const spinner = lightboxMediaDisplay.querySelector('.loading-spinner');
-            if (spinner) {
-                spinner.remove();
+            if (spinnerTimeout) {
+                clearTimeout(spinnerTimeout);
+                spinnerTimeout = null;
             }
+            loadingSpinner.classList.add('hidden');
         }
 
         // Opens the lightbox with a specific image/video
@@ -1273,12 +1270,19 @@
                 clearInterval(slideshowInterval);
                 slideshowInterval = null;
             }
+            // Always clear any pending spinner timeout when updating media
+            if (spinnerTimeout) {
+                clearTimeout(spinnerTimeout);
+                spinnerTimeout = null;
+            }
+            hideLoadingSpinner(); // Ensure spinner is hidden initially for a new load
 
             const mediaItem = currentDisplayedMedia[currentMediaIndex];
             if (!mediaItem) {
                 console.error(`[updateLightboxMedia] mediaItem is undefined or null at index ${currentMediaIndex}. Cannot update lightbox.`);
-                lightboxMediaDisplay.innerHTML = ''; // Clear content if no media
-                hideLoadingSpinner();
+                // Clear existing media if no media to display
+                const existingMedia = lightboxMediaDisplay.querySelector('.media-display');
+                if (existingMedia) existingMedia.remove();
                 return;
             }
 
@@ -1299,8 +1303,8 @@
                     mediaUrlForLightbox = `/${fileToProcessPath}`;
                 }
                 displayPath = `Trashed: ${filename}`;
-                if (mediaItem.original_path) {
-                    displayPath += ` (from: ${mediaItem.original_path})`;
+                if (mediaItem.original_path_from_metadata) { // Use original_path_from_metadata for display
+                    displayPath += ` (from: ${mediaItem.original_path_from_metadata})`;
                 }
             } else {
                 fileToProcessPath = mediaItem.original_path;
@@ -1316,84 +1320,62 @@
             // Create the new media element
             const newMediaElement = document.createElement(isVideo ? 'video' : 'img');
             newMediaElement.classList.add('media-display');
-            newMediaElement.src = mediaUrlForLightbox;
             newMediaElement.alt = `Full size media: ${filename}`;
             newMediaElement.title = filename;
             newMediaElement.style.opacity = '0'; // Start new element hidden for fade-in
 
             // Attach event listeners for loading and errors
+            const handleMediaLoad = () => {
+                hideLoadingSpinner(); // Hide spinner when media is loaded
+                newMediaElement.classList.add('fade-in'); // Start fade-in animation
+                // If slideshow is running, set interval or video ended listener
+                if (isSlideshowRunning && !isVideo) {
+                    slideshowInterval = setInterval(showNextImage, slideshowDelay);
+                } else if (isSlideshowRunning && isVideo) {
+                    newMediaElement.autoplay = true;
+                    newMediaElement.play(); // Ensure video plays if autoplay is set
+                    newMediaElement.addEventListener('ended', showNextImage, { once: true });
+                }
+            };
+
+            const handleMediaError = () => {
+                hideLoadingSpinner();
+                newMediaElement.src = `https://placehold.co/800x600/cccccc/333333?text=${isVideo ? 'Video' : 'Image'}+Error`;
+                newMediaElement.alt = `Error loading ${isVideo ? 'video' : 'image'}: ${filename}`;
+                console.error(`Failed to load media: ${mediaUrlForLightbox}`);
+            };
+
             if (isVideo) {
                 newMediaElement.controls = true;
                 newMediaElement.preload = "auto";
-                newMediaElement.addEventListener('loadeddata', () => {
-                    hideLoadingSpinner();
-                    newMediaElement.classList.add('fade-in'); // Add fade-in here
-                });
-                newMediaElement.addEventListener('error', () => {
-                    hideLoadingSpinner();
-                    newMediaElement.src = `https://placehold.co/800x600/cccccc/333333?text=Video+Error`;
-                    newMediaElement.alt = `Error loading video: ${filename}`;
-                    console.error(`Failed to load video: ${mediaUrlForLightbox}`);
-                });
-                if (isSlideshowRunning) {
-                    newMediaElement.autoplay = true;
-                    newMediaElement.addEventListener('ended', showNextImage);
-                }
-            } else { // Image
-                newMediaElement.addEventListener('load', () => {
-                    hideLoadingSpinner();
-                    newMediaElement.classList.add('fade-in'); // Add fade-in here
-                });
-                newMediaElement.addEventListener('error', () => {
-                    hideLoadingSpinner();
-                    newMediaElement.src = `https://placehold.co/800x600/cccccc/333333?text=Image+Error`;
-                    newMediaElement.alt = `Error loading image: ${filename}`;
-                    console.error(`Failed to load image: ${mediaUrlForLightbox}`);
-                });
-                if (isSlideshowRunning) {
-                    slideshowInterval = setInterval(showNextImage, slideshowDelay);
-                }
+                newMediaElement.addEventListener('loadeddata', handleMediaLoad);
+                newMediaElement.addEventListener('error', handleMediaError);
+            } else { // Image (including convertible types)
+                newMediaElement.addEventListener('load', handleMediaLoad);
+                newMediaElement.addEventListener('error', handleMediaError);
             }
 
-            // Scenario 1: Conversion is needed (RAW or HEIC)
+            // Step 1: Handle old media element fade-out and removal
+            if (oldMediaElement) {
+                oldMediaElement.classList.remove('fade-in'); // Ensure old one doesn't have fade-in
+                oldMediaElement.classList.add('fade-out');
+                oldMediaElement.addEventListener('animationend', function handler() {
+                    oldMediaElement.removeEventListener('animationend', handler);
+                    oldMediaElement.remove(); // Remove old element after fade-out
+                }, { once: true });
+            }
+
+            // Step 2: Decide whether to show spinner and append new media
+            // Show spinner with a delay ONLY for convertible images
             if (isConvertible && !isVideo) {
-                // If there's an old element, fade it out first, then show spinner.
-                if (oldMediaElement) {
-                    oldMediaElement.classList.remove('fade-in');
-                    oldMediaElement.classList.add('fade-out');
-                    oldMediaElement.addEventListener('animationend', function handler() {
-                        oldMediaElement.removeEventListener('animationend', handler);
-                        oldMediaElement.remove(); // Remove old element after fade-out
-                        showLoadingSpinner(); // Show spinner ONLY after old element is gone
-                        lightboxMediaDisplay.appendChild(newMediaElement); // Append new element after spinner is shown
-                    }, { once: true });
-                } else {
-                    // If no old element, just show spinner immediately and load new media
+                spinnerTimeout = setTimeout(() => {
                     showLoadingSpinner();
-                    lightboxMediaDisplay.appendChild(newMediaElement);
-                }
+                }, 100); // 100ms delay before showing spinner
             }
-            // Scenario 2: No conversion needed (JPG, PNG, Video, etc.) - smooth cross-fade
-            else {
-                hideLoadingSpinner(); // Ensure spinner is hidden if it was accidentally shown
-                // If there's an old element, perform cross-fade
-                if (oldMediaElement) {
-                    oldMediaElement.classList.remove('fade-in');
-                    oldMediaElement.classList.add('fade-out');
-                    lightboxMediaDisplay.appendChild(newMediaElement); // Add new element to DOM
-                    // The new element's load/loadeddata listener will handle adding 'fade-in'
-                    // and making its opacity 1.
-
-                    oldMediaElement.addEventListener('animationend', function handler() {
-                        oldMediaElement.removeEventListener('animationend', handler);
-                        oldMediaElement.remove(); // Remove old element after fade-out
-                    }, { once: true });
-                } else {
-                    // If no old element (first load into lightbox), just append the new one
-                    lightboxMediaDisplay.appendChild(newMediaElement);
-                    // The newMediaElement's load/loadeddata listener will handle adding 'fade-in'
-                }
-            }
+            
+            // Append the new media element and set its src
+            lightboxMediaDisplay.appendChild(newMediaElement);
+            newMediaElement.src = mediaUrlForLightbox;
 
             // Control visibility of the download RAW button
             if (isConvertible && !isViewingTrash) {
