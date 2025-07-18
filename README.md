@@ -44,11 +44,18 @@ Before you begin, ensure you have the following installed on your system:
     cd photogallery
     ```
 
-2.  **Install System-Level Dependencies (macOS users):**
-    These libraries are crucial for `rawpy` and `pillow-heif` to function correctly.
-    ```bash
-    brew install libheif libraw pkg-config
-    ```
+2.  **Install System-Level Dependencies:**
+    These libraries are crucial for `rawpy`, `pillow-heif`, and `opencv` to function correctly.
+
+    * **On macOS (using Homebrew):**
+        ```bash
+        brew install libheif libraw pkg-config
+        ```
+    * **On Debian/Ubuntu-based Linux:**
+        ```bash
+        sudo apt-get update
+        sudo apt-get install libheif-dev libraw-dev libgl1-mesa-glx
+        ```
 
 3.  **Create a Python Virtual Environment (Recommended):**
     This isolates your project's dependencies from your system's Python installation.
@@ -64,7 +71,7 @@ Before you begin, ensure you have the following installed on your system:
     pip install pillow-heif --no-binary :all:
     pip install rawpy --no-binary :all:
     ```
-    *Note: If you encounter build errors, ensure `libheif` and `libraw` are correctly installed via Homebrew (or your Linux package manager) and that Xcode Command Line Tools are installed on macOS.*
+    *Note: If you encounter build errors, ensure the system-level dependencies from step 2 are correctly installed.*
 
 ## Configuration
 
@@ -127,8 +134,9 @@ The application dynamically generates thumbnails on demand. They are stored in h
 ## Troubleshooting
 
 * **"No folders found" on first launch:** Ensure the `image_library_root` path in `server.py` is correct and that the server has read permissions for that directory.
+* **`ModuleNotFoundError: No module named 'cv2'` on Linux:** This means `opencv-python-headless` did not install correctly. Make sure you have installed the system-level dependencies first by running `sudo apt-get install libheif-dev libraw-dev libgl1-mesa-glx`, then try reinstalling the pip package: `pip install --force-reinstall opencv-python-headless`.
 * **"cannot identify image file" for HEIC/RAW (in server logs):**
-    * Verify `libheif` and `libraw` are installed via Homebrew (macOS).
+    * Verify `libheif` and `libraw` are installed via your system's package manager (e.g., Homebrew on macOS, apt-get on Linux).
     * Ensure `pillow-heif` and `rawpy` were installed using the `--no-binary :all:` flag.
-* **Video thumbnails not generating:** Ensure `opencv-python-headless` is installed in your virtual environment.
+* **Video thumbnails not generating:** Ensure `opencv-python-headless` is installed in your virtual environment and that the necessary system libraries are present.
 * **Incorrect thumbnail orientation:** Delete the `.thumbnails` folder within the affected directory and restart the server to force regeneration.
