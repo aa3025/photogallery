@@ -1266,51 +1266,6 @@
             }
         }
 
-        // Helper function to create and append the new media element
-        function createAndAppendNewMediaElement(mediaUrl, filename, isVideo, isSlideshowRunning) {
-            const newMediaElement = document.createElement(isVideo ? 'video' : 'img');
-            newMediaElement.classList.add('media-display');
-            newMediaElement.src = mediaUrl;
-            newMediaElement.alt = `Full size media: ${filename}`;
-            newMediaElement.title = filename;
-            newMediaElement.style.opacity = '0'; // Start new element hidden for fade-in
-
-            if (isVideo) {
-                newMediaElement.controls = true;
-                newMediaElement.preload = "auto";
-                newMediaElement.addEventListener('loadeddata', () => {
-                    hideLoadingSpinner();
-                    newMediaElement.classList.add('fade-in');
-                });
-                newMediaElement.addEventListener('error', () => {
-                    hideLoadingSpinner();
-                    newMediaElement.src = `https://placehold.co/800x600/cccccc/333333?text=Video+Error`;
-                    newMediaElement.alt = `Error loading video: ${filename}`;
-                    console.error(`Failed to load video: ${mediaUrl}`);
-                });
-                if (isSlideshowRunning) {
-                    newMediaElement.autoplay = true;
-                    newMediaElement.addEventListener('ended', showNextImage);
-                }
-            } else { // Image
-                newMediaElement.addEventListener('load', () => {
-                    hideLoadingSpinner();
-                    newMediaElement.classList.add('fade-in');
-                });
-                newMediaElement.addEventListener('error', () => {
-                    hideLoadingSpinner();
-                    newMediaElement.src = `https://placehold.co/800x600/cccccc/333333?text=Image+Error`;
-                    newMediaElement.alt = `Error loading image: ${filename}`;
-                    console.error(`Failed to load image: ${mediaUrl}`);
-                });
-                if (isSlideshowRunning) {
-                    slideshowInterval = setInterval(showNextImage, slideshowDelay);
-                }
-            }
-            lightboxMediaDisplay.appendChild(newMediaElement);
-        }
-
-
         // Updates the media displayed in the lightbox
         function updateLightboxMedia() {
             // Always clear any existing interval when updating media
@@ -1358,6 +1313,48 @@
             // Get the currently displayed media element
             const oldMediaElement = lightboxMediaDisplay.querySelector('.media-display');
 
+            // Create the new media element
+            const newMediaElement = document.createElement(isVideo ? 'video' : 'img');
+            newMediaElement.classList.add('media-display');
+            newMediaElement.src = mediaUrlForLightbox;
+            newMediaElement.alt = `Full size media: ${filename}`;
+            newMediaElement.title = filename;
+            newMediaElement.style.opacity = '0'; // Start new element hidden for fade-in
+
+            // Attach event listeners for loading and errors
+            if (isVideo) {
+                newMediaElement.controls = true;
+                newMediaElement.preload = "auto";
+                newMediaElement.addEventListener('loadeddata', () => {
+                    hideLoadingSpinner();
+                    newMediaElement.classList.add('fade-in'); // Add fade-in here
+                });
+                newMediaElement.addEventListener('error', () => {
+                    hideLoadingSpinner();
+                    newMediaElement.src = `https://placehold.co/800x600/cccccc/333333?text=Video+Error`;
+                    newMediaElement.alt = `Error loading video: ${filename}`;
+                    console.error(`Failed to load video: ${mediaUrlForLightbox}`);
+                });
+                if (isSlideshowRunning) {
+                    newMediaElement.autoplay = true;
+                    newMediaElement.addEventListener('ended', showNextImage);
+                }
+            } else { // Image
+                newMediaElement.addEventListener('load', () => {
+                    hideLoadingSpinner();
+                    newMediaElement.classList.add('fade-in'); // Add fade-in here
+                });
+                newMediaElement.addEventListener('error', () => {
+                    hideLoadingSpinner();
+                    newMediaElement.src = `https://placehold.co/800x600/cccccc/333333?text=Image+Error`;
+                    newMediaElement.alt = `Error loading image: ${filename}`;
+                    console.error(`Failed to load image: ${mediaUrlForLightbox}`);
+                });
+                if (isSlideshowRunning) {
+                    slideshowInterval = setInterval(showNextImage, slideshowDelay);
+                }
+            }
+
             // Scenario 1: Conversion is needed (RAW or HEIC)
             if (isConvertible && !isVideo) {
                 // If there's an old element, fade it out first, then show spinner.
@@ -1368,73 +1365,33 @@
                         oldMediaElement.removeEventListener('animationend', handler);
                         oldMediaElement.remove(); // Remove old element after fade-out
                         showLoadingSpinner(); // Show spinner ONLY after old element is gone
-                        // After spinner, create and append the new media element
-                        createAndAppendNewMediaElement(mediaUrlForLightbox, filename, isVideo, isSlideshowRunning);
+                        lightboxMediaDisplay.appendChild(newMediaElement); // Append new element after spinner is shown
                     }, { once: true });
                 } else {
                     // If no old element, just show spinner immediately and load new media
                     showLoadingSpinner();
-                    createAndAppendNewMediaElement(mediaUrlForLightbox, filename, isVideo, isSlideshowRunning);
+                    lightboxMediaDisplay.appendChild(newMediaElement);
                 }
             }
             // Scenario 2: No conversion needed (JPG, PNG, Video, etc.) - smooth cross-fade
             else {
-                // Create the new media element immediately
-                const newMediaElement = document.createElement(isVideo ? 'video' : 'img');
-                newMediaElement.classList.add('media-display');
-                newMediaElement.src = mediaUrlForLightbox;
-                newMediaElement.alt = `Full size media: ${filename}`;
-                newMediaElement.title = filename;
-                newMediaElement.style.opacity = '0'; // Start new element hidden for fade-in
-
-                if (isVideo) {
-                    newMediaElement.controls = true;
-                    newMediaElement.preload = "auto";
-                    newMediaElement.addEventListener('loadeddata', () => {
-                        hideLoadingSpinner();
-                        newMediaElement.classList.add('fade-in');
-                    });
-                    newMediaElement.addEventListener('error', () => {
-                        hideLoadingSpinner();
-                        newMediaElement.src = `https://placehold.co/800x600/cccccc/333333?text=Video+Error`;
-                        newMediaElement.alt = `Error loading video: ${filename}`;
-                        console.error(`Failed to load video: ${mediaUrlForLightbox}`);
-                    });
-                    if (isSlideshowRunning) {
-                        newMediaElement.autoplay = true;
-                        newMediaElement.addEventListener('ended', showNextImage);
-                    }
-                } else { // Image
-                    newMediaElement.addEventListener('load', () => {
-                        hideLoadingSpinner();
-                        newMediaElement.classList.add('fade-in');
-                    });
-                    newMediaElement.addEventListener('error', () => {
-                        hideLoadingSpinner();
-                        newMediaElement.src = `https://placehold.co/800x600/cccccc/333333?text=Image+Error`;
-                        newMediaElement.alt = `Error loading image: ${filename}`;
-                        console.error(`Failed to load image: ${mediaUrlForLightbox}`);
-                    });
-                    if (isSlideshowRunning) {
-                        slideshowInterval = setInterval(showNextImage, slideshowDelay);
-                    }
-                }
-
+                hideLoadingSpinner(); // Ensure spinner is hidden if it was accidentally shown
                 // If there's an old element, perform cross-fade
                 if (oldMediaElement) {
                     oldMediaElement.classList.remove('fade-in');
                     oldMediaElement.classList.add('fade-out');
                     lightboxMediaDisplay.appendChild(newMediaElement); // Add new element to DOM
+                    // The new element's load/loadeddata listener will handle adding 'fade-in'
+                    // and making its opacity 1.
 
                     oldMediaElement.addEventListener('animationend', function handler() {
                         oldMediaElement.removeEventListener('animationend', handler);
                         oldMediaElement.remove(); // Remove old element after fade-out
-                        // New element's load/loadeddata listener will handle its fade-in
                     }, { once: true });
                 } else {
                     // If no old element (first load into lightbox), just append the new one
                     lightboxMediaDisplay.appendChild(newMediaElement);
-                    // New element's load/loadeddata listener will handle its fade-in
+                    // The newMediaElement's load/loadeddata listener will handle adding 'fade-in'
                 }
             }
 
@@ -1690,20 +1647,85 @@
             document.body.style.overflow = ''; 
         }
 
+        // New function to handle refreshing the gallery and lightbox after an action
+        async function handlePostActionRefresh() {
+            const wasLightboxActive = lightboxOverlay.classList.contains('active');
+            const oldCurrentMediaIndex = currentMediaIndex; // Store the index before refreshing
+
+            // Re-fetch the media for the current path.
+            // These functions will update `currentDisplayedMedia` and `currentPath`.
+            if (currentPath.length === 1 && currentPath[0] === TRASH_FOLDER_NAME) {
+                await loadTrashContent();
+            } else if (currentPath.length === 1) {
+                await loadMonths(currentPath[0]);
+            } else if (currentPath.length === 2) {
+                await loadDays(currentPath[0], currentPath[1]);
+            } else if (currentPath.length === 3) {
+                await loadPhotos(currentPath[0], currentPath[1], currentPath[2]);
+            } else {
+                // Fallback for unexpected path state, or if starting from root and deleting something
+                await loadYears();
+            }
+
+            // After re-loading, currentDisplayedMedia is updated.
+            // Now, determine the new index for the lightbox.
+            if (currentDisplayedMedia.length === 0) {
+                // If no media left in the folder, close lightbox
+                closeLightbox();
+                return;
+            }
+
+            // Adjust currentMediaIndex:
+            // If the old index is now out of bounds (because the last item was removed),
+            // set it to the new last item's index.
+            if (oldCurrentMediaIndex >= currentDisplayedMedia.length) {
+                currentMediaIndex = currentDisplayedMedia.length - 1;
+            } else {
+                // Otherwise, keep the index. This will effectively show the item that
+                // moved into the old index's position (the "next" item).
+                currentMediaIndex = oldCurrentMediaIndex;
+            }
+
+            // If the lightbox was active, update it with the new media
+            if (wasLightboxActive) {
+                updateLightboxMedia();
+            } else {
+                // If lightbox was not active (e.g., action from thumbnail grid),
+                // we don't need to do anything with the lightbox.
+            }
+        }
+
+
         // Event listeners for confirmation modal buttons
         confirmActionBtn.addEventListener('click', async () => {
             const pathBeingProcessed = fileToProcessPath; 
             hideConfirmationModal();
-            closeLightbox(); 
+            // Do NOT close lightbox here. handlePostActionRefresh will manage it.
 
             const isViewingTrash = currentPath.includes(TRASH_FOLDER_NAME);
+            let actionSuccessful = false;
 
-            if (confirmActionBtn.textContent === "Restore") { 
-                await restoreFile(pathBeingProcessed);
-            } else if (isViewingTrash && confirmActionBtn.textContent === "Delete Forever") { 
-                await deleteFileForever(pathBeingProcessed);
-            } else { 
-                await moveFileToTrash(pathBeingProcessed);
+            try {
+                if (confirmActionBtn.textContent === "Restore") { 
+                    await restoreFile(pathBeingProcessed);
+                    actionSuccessful = true;
+                } else if (isViewingTrash && confirmActionBtn.textContent === "Delete Forever") { 
+                    await deleteFileForever(pathBeingProcessed);
+                    actionSuccessful = true;
+                } else { 
+                    await moveFileToTrash(pathBeingProcessed);
+                    actionSuccessful = true;
+                }
+            } catch (error) {
+                console.error("Error during file action:", error);
+                alert(`Error performing action: ${error.message}`); 
+            }
+
+            if (actionSuccessful) {
+                await handlePostActionRefresh();
+            } else {
+                // If action wasn't successful, just close lightbox as a fallback
+                closeLightbox();
             }
         });
 
@@ -1723,36 +1745,15 @@
 
                 if (response.ok) {
                     console.log('File moved to trash successfully.');
-                    if (currentPath.length === 1 && currentPath[0] === TRASH_FOLDER_NAME) {
-                        loadTrashContent(); 
-                    } else if (currentPath.length === 1) { 
-                        loadMonths(currentPath[0]);
-                    } else if (currentPath.length === 2) { 
-                        loadDays(currentPath[0], currentPath[1]);
-                    } else if (currentPath.length === 3) { 
-                        loadPhotos(currentPath[0], currentPath[1], currentPath[2]);
-                    } else { 
-                        loadYears();
-                    }
+                    // Do NOT call load functions or closeLightbox here. handlePostActionRefresh will.
                 } else {
                     const errorData = await response.json();
                     console.error('Failed to move file to trash:', errorData.error);
-                    alert(`Error moving file to trash: ${errorData.error}`); 
+                    throw new Error(errorData.error); // Throw error to be caught by caller
                 }
             } catch (error) {
                 console.error('Network or unexpected error during file movement:', error);
-                alert(`An unexpected error occurred: ${error.message}`); 
-                if (currentPath.length === 1 && currentPath[0] === TRASH_FOLDER_NAME) {
-                    loadTrashContent(); 
-                } else if (currentPath.length === 1) { 
-                    loadMonths(currentPath[0]);
-                } else if (currentPath.length === 2) { 
-                    loadDays(currentPath[0], currentPath[1]);
-                } else if (currentPath.length === 3) { 
-                    loadPhotos(currentPath[0], currentPath[1], currentPath[2]);
-                } else { 
-                    loadYears();
-                }
+                throw error; // Re-throw to be caught by caller
             }
         }
 
@@ -1770,17 +1771,15 @@
 
                 if (response.ok) {
                     console.log('File permanently deleted successfully.');
-                    loadTrashContent();
+                    // Do NOT call load functions or closeLightbox here. handlePostActionRefresh will.
                 } else {
                     const errorData = await response.json();
                     console.error('Failed to permanently delete file:', errorData.error);
-                    alert(`Error deleting file forever: ${errorData.error}`);
-                    loadTrashContent(); 
+                    throw new Error(errorData.error); // Throw error to be caught by caller
                 }
             } catch (error) {
                 console.error('Network or unexpected error during permanent deletion:', error);
-                alert(`An unexpected error occurred: ${error.message}`);
-                loadTrashContent(); 
+                throw error; // Re-throw to be caught by caller
             }
         }
 
@@ -1798,17 +1797,15 @@
 
                 if (response.ok) {
                     console.log('File restored successfully.');
-                    loadTrashContent();
+                    // Do NOT call load functions or closeLightbox here. handlePostActionRefresh will.
                 } else {
                     const errorData = await response.json();
                     console.error('Failed to restore file:', errorData.error);
-                    alert(`Error restoring file: ${errorData.error}`);
-                    loadTrashContent(); 
+                    throw new Error(errorData.error); // Throw error to be caught by caller
                 }
             } catch (error) {
                 console.error('Network or unexpected error during restoration:', error);
-                alert(`An unexpected error occurred: ${error.message}`);
-                loadTrashContent(); 
+                throw error; // Re-throw to be caught by caller
             }
         }
 
@@ -1836,6 +1833,7 @@
             } catch (error) {
                 console.error('Error fetching trash content:', error);
                 galleryContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Error loading trash content: ${error.message}.</p>`;
+                // Do not throw here, just display error in gallery container
             }
             updateActionButtonsVisibility(); 
         }
