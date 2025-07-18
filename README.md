@@ -56,7 +56,7 @@ Before you begin, ensure you have the following installed on your system:
 4.  **Install Python Dependencies:**
     Install the required Python packages using pip. The `--no-binary :all:` flag for `pillow-heif` and `rawpy` is important to force compilation against your system's `libheif` and `libraw` installations.
     ```bash
-    pip install Flask Flask-Cors Pillow numpy opencv-python-headless
+    pip install Flask Flask-Cors Pillow numpy opencv-python-headless imageio
     pip install pillow-heif --no-binary :all:
     pip install rawpy --no-binary :all:
     ```
