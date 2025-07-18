@@ -9,8 +9,12 @@ This project provides a simple, self-hosted web application to browse your local
     * **Images:** Including HEIC and various RAW formats (NEF, CR2, ARW, etc.).
     * **Videos:** A frame is automatically extracted from `.MOV` and `.MP4` files to create a static preview.
 * **Full-Resolution Lightbox:** Click any thumbnail to view the full-resolution image or play the video in a responsive, immersive lightbox.
-* **Recursive Slideshow:** Start an automatic slideshow of all media within any selected folder and its subfolders.
-* **Trash Management:** Move unwanted media to a dedicated `_Trash` folder, with options to permanently delete or restore files. Associated thumbnails and previews are correctly handled during these operations.
+* **Recursive Slideshow:** Start an automatic slideshow of all media within any selected folder and its subfolders, including a full library slideshow from the root view.
+* **Robust Trash Management:**
+    * Move unwanted media to a dedicated `_Trash` folder.
+    * Permanently delete or restore individual files.
+    * **Bulk Actions:** "Empty Trash" and "Restore All" buttons for efficient management.
+    * Associated thumbnails and previews are correctly handled during all trash operations.
 * **EXIF Orientation Correction:** Thumbnails are automatically rotated based on EXIF orientation data to display correctly.
 * **Drag-and-Drop Uploads:** Easily upload new files directly to the folder you are currently viewing.
 * **Dark/Light Theme Switching:** Toggle between themes for comfortable viewing.
@@ -118,6 +122,7 @@ The application dynamically generates thumbnails on demand. They are stored in h
 * **Trash Management:**
     * **Move to Trash:** From the lightbox view, click the trash can icon.
     * **Delete Forever/Restore:** Navigate to the `_Trash` folder from the root view. Open a trashed item in the lightbox to see options for permanent deletion or restoration.
+    * **Bulk Actions:** While in the `_Trash` folder, use the "Empty Trash" and "Restore All" buttons in the top-right menu.
 
 ## Troubleshooting
 
