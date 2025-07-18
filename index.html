@@ -1280,9 +1280,8 @@
             const mediaItem = currentDisplayedMedia[currentMediaIndex];
             if (!mediaItem) {
                 console.error(`[updateLightboxMedia] mediaItem is undefined or null at index ${currentMediaIndex}. Cannot update lightbox.`);
-                // Clear existing media if no media to display
-                const existingMedia = lightboxMediaDisplay.querySelector('.media-display');
-                if (existingMedia) existingMedia.remove();
+                // Remove all media elements if no valid mediaItem
+                lightboxMediaDisplay.querySelectorAll('.media-display').forEach(el => el.remove());
                 return;
             }
 
@@ -1313,9 +1312,6 @@
             }
 
             lightboxFilename.textContent = displayPath;
-
-            // Get the currently displayed media element
-            const oldMediaElement = lightboxMediaDisplay.querySelector('.media-display');
 
             // Create the new media element
             const newMediaElement = document.createElement(isVideo ? 'video' : 'img');
@@ -1355,25 +1351,19 @@
                 newMediaElement.addEventListener('error', handleMediaError);
             }
 
-            // Step 1: Handle old media element fade-out and removal
-            if (oldMediaElement) {
-                oldMediaElement.classList.remove('fade-in'); // Ensure old one doesn't have fade-in
-                oldMediaElement.classList.add('fade-out');
-                oldMediaElement.addEventListener('animationend', function handler() {
-                    oldMediaElement.removeEventListener('animationend', handler);
-                    oldMediaElement.remove(); // Remove old element after fade-out
-                }, { once: true });
-            }
+            // --- CRITICAL CHANGE: Handle all existing media elements for fade-out and removal ---
+            const allExistingMediaElements = lightboxMediaDisplay.querySelectorAll('.media-display');
+            allExistingMediaElements.forEach(element => {
+                // Apply fade-out to all currently visible media elements
+                element.classList.remove('fade-in'); // Remove any lingering fade-in class
+                element.classList.add('fade-out');
+                // Schedule removal after the fade-out animation completes
+                setTimeout(() => {
+                    element.remove();
+                }, 800); // Matches the CSS fadeOut animation duration (0.8s)
+            });
 
-            // Step 2: Decide whether to show spinner and append new media
-            // Show spinner with a delay ONLY for convertible images
-            if (isConvertible && !isVideo) {
-                spinnerTimeout = setTimeout(() => {
-                    showLoadingSpinner();
-                }, 100); // 100ms delay before showing spinner
-            }
-            
-            // Append the new media element and set its src
+            // Append the new media element. It will start at opacity 0 and fade in on load.
             lightboxMediaDisplay.appendChild(newMediaElement);
             newMediaElement.src = mediaUrlForLightbox;
 
