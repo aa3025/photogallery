@@ -8,6 +8,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Material Icons -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Corinthia:wght@400;700&display=swap" rel="stylesheet">
+
+
     <style>
         /* Custom styles for better aesthetics */
         html, body {
@@ -22,11 +25,24 @@
             flex-direction: column; /* Stack items vertically */
             padding: 1rem; /* Add padding to body, which will be the margin for the container */
         }
+
+   h1 {
+    font-family: 'Corinthia', cursive; /* Change this line */
+    font-weight: 700;
+    font-size: 5rem !important;
+    transition: color 0.3s ease;
+}
+
         /* Default Dark Theme */
         body[data-theme='dark'] {
             background-color: #1a202c; /* Dark background for the body */
             color: #e2e8f0; /* Light text color for contrast */
         }
+        
+        body[data-theme='light'] h1 {
+            color: #1a202c; /* Darker color for light theme */
+        }
+
         .container {
             min-width: calc(100vw - 3rem); /* Updated to 100vw - 3rem as per your request */
             min-height: auto;/*calc(100vh - 2rem); /* Set min-height to fill viewport, accounting for body padding */
@@ -750,7 +766,7 @@
 </head>
 <body>
     <div class="container">
-        <h1 class="text-4xl font-extrabold text-center text-gray-300 mb-8">Image/Video Gallery Browser</h1>
+        <h1 class="font-extrabold text-center text-gray-300 mb-8">Image & Video Gallery Browser</h1>
         <!-- Action buttons container for breadcrumb area -->
         <div id="breadcrumbActionButtonsContainer">
             <!-- Theme Toggle button for breadcrumb area -->
