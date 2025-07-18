@@ -1504,7 +1504,7 @@
             } else {
                 fileToProcessPath = mediaItem.original_path;
                 mediaUrlForLightbox = `/api/media/${fileToProcessPath}`;
-                displayPath = mediaItem.original_path.replace(/\//g, ' -> ');
+                displayPath = mediaItem.original_path.replace(/\//g, '   ⮕   ');
             }
 
             lightboxFilename.textContent = displayPath;
