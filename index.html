@@ -142,10 +142,17 @@
 
         /* Make the actual Material Icon larger to serve as background */
         .folder-nav-button .material-icons.folder-icon {
-            font-size: 4.8rem; /* MODIFIED: Larger size for the folder icon (+20%) */
+            font-size: 4.6rem; /* MODIFIED: Larger size for the folder icon (+20%) */
             color: rgba(156, 163, 175, 0.7); /* Greyish color for the folder icon */
             transition: color 0.2s ease;
         }
+        /* Make the size of trsh folder smaller */
+        .trash-nav-link .material-icons.folder-icon {
+            font-size: 3.2rem; /* or any smaller size you want */
+        }
+
+
+
         /* Dark theme adjustment for folder icon color */
         body[data-theme='dark'] .folder-nav-button .material-icons.folder-icon {
             color: rgba(107, 114, 128, 0.7); /* Darker grey for dark theme */
@@ -255,7 +262,6 @@
         /* Custom scrollbar for gallery */
         .gallery-grid {
             /* Removed overflow-y: scroll; and padding-right: 15px; */
-            flex-grow: 1; /* Allow gallery grid to take available vertical space */
         }
         /* Removed custom scrollbar styling for .gallery-grid as it will no longer have its own scrollbar */
         /* .gallery-grid::-webkit-scrollbar {
@@ -273,13 +279,6 @@
             background: #8892b0;
         } */
 
-        /* Ensure sections can grow within the flex container */
-        #topLevelFoldersSection,
-        #subFoldersSection,
-        #gallerySection {
-            flex-grow: 1; /* Allow these sections to grow and fill available space */
-        }
-        
         /* MODIFIED: Add alignment to folder containers */
         #topLevelFoldersContainer, #subFoldersContainer {
             align-items: center;
@@ -485,7 +484,7 @@
         }
         /* Adjust icon size within this button */
         .home-breadcrumb-btn .material-icons {
-            font-size: 2rem;
+            font-size: 3rem !important;
             line-height: 1;
         }
         .home-breadcrumb-btn .folder-name-overlay {
@@ -1138,10 +1137,12 @@
             border-radius: 50%;
             width: 24px; /* Smaller default size */
             height: 24px; /* Smaller default size */
+            max-width: 24px; /* Smaller default size */
+            max-height: 24px; /* Smaller default size */
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 0.9rem; /* Smaller icon size */
+            font-size: 0.9rem ; /* Smaller icon size */
             font-weight: bold;
             cursor: pointer;
             z-index: 10; /* Above the folder link */
@@ -1152,14 +1153,14 @@
         /* Show and grow on hover over the parent folder-nav-button */
         .folder-nav-button:hover .delete-folder-btn {
             opacity: 1;
-            transform: scale(1.5); /* Grow by 50% */
+            transform: scale(1.2); /* Grow by 50% */
         }
         .delete-folder-btn:hover {
             background-color: rgba(220, 38, 38, 1); /* Darker red on hover */
         }
         /* Ensure the icon within the delete button is centered and sized correctly */
         .delete-folder-btn .material-icons {
-            font-size: 1.2rem; /* Adjust icon size within the button */
+            font-size: 1.2rem ; /* Adjust icon size within the button */
         }
 
     </style>
@@ -1580,16 +1581,12 @@
                 currentDisplayedMedia.forEach((mediaItem, index) => {
                     // mediaItem is now guaranteed to be an object with filename and original_path (or relative_path_in_trash)
                     let fullRelativePathForOriginal; 
-                    let thumbnailMediaUrl; 
                     let filename = mediaItem.filename; 
 
                     if (isViewingTrash) {
                         fullRelativePathForOriginal = mediaItem.relative_path_in_trash; 
-                        thumbnailMediaUrl = `/api/media/${fullRelativePathForOriginal}`; // Serve directly from /api/media for trashed thumbnails
                     } else {
                         fullRelativePathForOriginal = mediaItem.original_path; 
-                        // MODIFIED: Always use the thumbnail endpoint for all media types
-                        thumbnailMediaUrl = `/api/thumbnail/${fullRelativePathForOriginal}`;
                     }
                     
                     if (typeof filename === 'string' && filename) { 
@@ -1602,6 +1599,7 @@
 
                         // MODIFIED: Always use an <img> for the thumbnail, even for videos
                         let mediaElement = document.createElement('img');
+                        const thumbnailMediaUrl = `/api/thumbnail/${fullRelativePathForOriginal}`;
                         mediaElement.dataset.src = thumbnailMediaUrl; 
                         mediaElement.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='; 
 
@@ -1612,7 +1610,6 @@
                         }
 
                         mediaElement.classList.add('thumbnail-fade-in');
-
                         mediaElement.alt = `Media from ${pathSegments.join('/')}`;
                         mediaElement.title = filename;
 
@@ -1639,10 +1636,8 @@
                         deleteBtn.title = isViewingTrash ? `Delete ${filename} Forever` : `Move ${filename} to Trash`;
                         deleteBtn.onclick = (e) => {
                             e.stopPropagation(); 
-                            // For trash items, pass the relative_path_in_trash for deletion
-                            // For regular items, pass the original_path for moving to trash
                             const pathForAction = isViewingTrash ? mediaItem.relative_path_in_trash : mediaItem.original_path;
-                            showConfirmationModal(pathForAction, isViewingTrash, false); // Changed to use new showConfirmationModal signature
+                            showConfirmationModal(pathForAction, isViewingTrash, false);
                         };
 
                         galleryItem.appendChild(mediaElement);
@@ -1656,8 +1651,12 @@
                     }
                 });
             } else {
-                galleryContainer.innerHTML = '<p class="text-center text-gray-600 col-span-full">No media found in this folder.</p>';
-                gallerySection.classList.add('hidden');
+                gallerySection.classList.remove('hidden');
+                galleryContainer.innerHTML = `<div class="col-span-full border-4 border-dashed border-gray-500 rounded-lg h-64 flex flex-col items-center justify-center text-center text-gray-500">
+                                                <i class="material-icons text-6xl">cloud_upload</i>
+                                                <p class="mt-4">No media found in this folder.</p>
+                                                <p>Drag and drop files here to upload.</p>
+                                            </div>`;
             }
             updateActionButtonsVisibility(); 
         }
@@ -1783,9 +1782,7 @@
                     topLevelFoldersContainer.innerHTML = '<p class="text-center text-gray-600 col-span-full">No folders found.</p>';
                 }
 
-                if (files.length > 0) {
-                    displayMediaThumbnails(files, []);
-                }
+                displayMediaThumbnails(files, []);
 
                 // Add the dynamic "Create New Folder" button
                 topLevelFoldersContainer.appendChild(createAddFolderButton('folder'));
@@ -1866,12 +1863,7 @@
                 // Add the dynamic "Create New Folder" button
                 subFoldersContainer.appendChild(createAddFolderButton('folder'));
 
-                if (files.length > 0) {
-                    displayMediaThumbnails(files, pathSegments); 
-                } else {
-                    gallerySection.classList.add('hidden');
-                    galleryContainer.innerHTML = '';
-                }
+                displayMediaThumbnails(files, pathSegments);
 
             } catch (error) {
                 console.error('Error fetching sub-folders and files:', error);
