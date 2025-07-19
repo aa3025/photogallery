@@ -6,7 +6,7 @@ This project provides a simple, self-hosted web application to browse your local
 
 * **Flexible Folder-based Navigation:** Browse your media organized in any nested folder structure you prefer. The system is no longer restricted to a Year/Month/Day format.
 * **Dynamic Thumbnail Generation:** Fast-loading, optimized thumbnails are generated on-demand for:
-    * **Images:** Including HEIC and various RAW formats (NEF, CR2, ARW, etc.).
+    * **Images:** Including HEIC and various RAW formats (NEF, RW2, CR2, ARW, etc.).
     * **Videos:** A frame is automatically extracted from `.MOV` and `.MP4` files to create a static preview.
 * **Full-Resolution Lightbox:** Click any thumbnail to view the full-resolution image or play the video in a responsive, immersive lightbox.
 * **Recursive Slideshow:** Start an automatic slideshow of all media within any selected folder and its subfolders, including a full library slideshow from the root view.
