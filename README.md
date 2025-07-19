@@ -105,10 +105,11 @@ The application dynamically generates thumbnails on demand. They are stored in h
 
 * **Forcing Thumbnail Regeneration:** If you update media files or want to regenerate all thumbnails (e.g., after adding video support):
     1.  **Stop the `server.py` application** (Ctrl+C in the terminal).
-    2.  **Delete all `.thumbnails` folders** within your `image_library_root`.
+    2.  **Delete all `.thumbnails` and `.previews` folders** within your `image_library_root`.
         * **macOS/Linux:**
             ```bash
             find "/path/to/your/photos" -name ".thumbnails" -type d -exec rm -rf {} +
+            find "/path/to/your/photos" -name ".previews" -type d -exec rm -rf {} +
             ```
             *(Replace `"/path/to/your/photos"` with your actual `image_library_root` path)*
         * **Windows (PowerShell):**
