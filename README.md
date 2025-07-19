@@ -115,9 +115,10 @@ The application dynamically generates thumbnails on demand. They are stored in h
         * **Windows (PowerShell):**
             ```powershell
             Get-ChildItem -Path "C:\path\to\your\photos" -Recurse -Directory -Hidden -Filter ".thumbnails" | Remove-Item -Recurse -Force
+            Get-ChildItem -Path "C:\path\to\your\photos" -Recurse -Directory -Hidden -Filter ".previews" | Remove-Item -Recurse -Force
             ```
             *(Replace `"C:\path\to\your\photos"` with your actual `image_library_root` path)*
-    3.  **Restart `server.py`**. Thumbnails will be regenerated as you browse.
+    3.  **Restart `server.py`**. Thumbnails and Previews (converted RAW and HEIC files) will be regenerated as you browse.
     4.  **Perform a hard refresh** in your browser (Cmd+Shift+R on Mac, Ctrl+Shift+R on Windows/Linux) to clear its cache.
 
 ## Usage
