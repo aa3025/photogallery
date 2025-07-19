@@ -2,7 +2,7 @@
 ######## YOUR SETUP #############
 
 PORT=8080 # Flask server port number
-GALLERY='/absolute/path/to/my/gallery' # all the gallery files should be here, with write permission to who is starting server.py
+GALLERY='/absolute/path/to/my/gallery' # all the gallery files should be here, with read/write permission to who is starting server.py
 
 #################################
 
