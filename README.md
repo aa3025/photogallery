@@ -19,6 +19,7 @@ This project provides a simple, self-hosted web application to browse your local
 * **Drag-and-Drop Uploads:** Easily upload new files directly to the folder you are currently viewing.
 * **Dark/Light Theme Switching:** Toggle between themes for comfortable viewing.
 * **Cross-Platform (Python-based):** Designed to run on any system where Python and its dependencies can be installed.
+* **To-Do:** selection of multiple files, deletion of multiple files (deletion of whole folders is already implemented)
 
 ## Prerequisites
 
