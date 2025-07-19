@@ -1,0 +1,1151 @@
+/* Custom styles for better aesthetics */
+        html, body {
+            height: 100%; /* Make html and body take full viewport height */
+            margin: 0; /* Remove default body margin */
+            padding: 0; /* Remove default body padding */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease; /* Smooth transition for theme change */
+            display: flex; /* Use flexbox to make body a flex container */
+            flex-direction: column; /* Stack items vertically */
+            padding: 1rem; /* Add padding to body, which will be the margin for the container */
+        }
+
+        h1 {
+            font-family: 'Corinthia', cursive; /* Corrected to Corinthia */
+            font-weight: 500; /* Corrected font weight */
+            font-size: 4rem !important; /* Corrected font size */
+            transition: color 0.3s ease;
+        }
+
+        /* Default Dark Theme */
+        body[data-theme='dark'] {
+            background-color: #1a202c; /* Dark background for the body */
+            color: #e2e8f0; /* Light text color for contrast */
+        }
+        
+        body[data-theme='dark'] h1 {
+            color: #e2e8f0; /* Light color for dark theme */
+        }
+
+        .container {
+            min-width: calc(100vw - 3rem); /* Updated to 100vw - 3rem as per your request */
+            min-height: auto;/*calc(100vh - 2rem); /* Set min-height to fill viewport, accounting for body padding */
+            margin: 0 auto; /* Center horizontally */
+            padding: 1.5rem;
+            border-radius: 12px;
+            flex-grow: 1; /* Allow container to grow and fill available space within body */
+            display: flex; /* Use flexbox for internal layout */
+            flex-direction: column; /* Stack internal content vertically */
+            position: relative; /* Added to make absolute positioning of its child */
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        /* Container Dark Theme */
+        body[data-theme='dark'] .container {
+            background-color: #2d3748; /* Slightly lighter dark background for the container */
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); /* Stronger shadow for dark theme */
+        }
+
+        /* Specific max-width for very large screens */
+        @media (min-width: 1536px) {
+            .container {
+                max-width: 2000px !important; /* Force this max-width for screens 1536px and wider */
+            }
+        }
+        /* General nav-link base style */
+        .nav-link {
+            padding: 0.4rem 0.8rem; /* Compact padding */
+            margin: 0.2rem; /* Compact margin */
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background-color 0.2s, transform 0.1s, color 0.2s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            display: inline-flex; /* Use inline-flex for horizontal alignment */
+            align-items: center; /* Vertically center content */
+            justify-content: center; /* Horizontally center content */
+            white-space: nowrap; /* Prevent wrapping within the nav-link itself */
+        }
+        /* Nav-link Dark Theme */
+        body[data-theme='dark'] .nav-link {
+            background-color: #4a5568; /* Darker grey for links */
+            color: #e2e8f0; /* Light text for links */
+        }
+        body[data-theme='dark'] .nav-link:hover {
+            background-color: #6a768f; /* Lighter grey on hover */
+            color: #fff; /* Changed text color to white on hover */
+            transform: translateY(-2px);
+        }
+        .nav-link.active {
+            background-color: #4f46e5; /* Active blue (can remain vibrant) */
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+        /* New style for year, month, day, and trash buttons to stack content */
+        .folder-nav-button {
+            flex-direction: column; /* Stack icon/name and count vertically */
+            min-width: 80px; /* Apply min-width only to these buttons */
+            position: relative; /* For delete button positioning */
+            height: auto; /* Allow height to adjust */
+            padding-top: 0.5rem; /* Adjust padding to accommodate the new layout */
+            padding-bottom: 0.5rem;
+            
+            /* NEW: Remove background/shadow for folder-nav-button */
+            background-color: transparent;
+            box-shadow: none;
+        }
+        /* Dark theme adjustment for folder-nav-button */
+        body[data-theme='dark'] .folder-nav-button {
+            background-color: transparent;
+            box-shadow: none;
+        }
+        body[data-theme='light'] .folder-nav-button {
+            background-color: transparent;
+            box-shadow: none;
+        }
+
+        /* Override item-count margin for these buttons to be on top */
+        .folder-nav-button .item-count {
+            margin-top: 0.1rem;
+            margin-left: 0; /* No left margin when stacked */
+        }
+        /* Style for the folder icon within the folder-nav-button */
+        /* .folder-nav-button .material-icons.folder-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.2rem;
+        } */
+
+        /* New wrapper for icon and name to allow text overlay */
+        .folder-icon-wrapper {
+            position: relative; /* For absolute positioning of text */
+            display: flex; /* To center the icon itself */
+            justify-content: center;
+            align-items: center;
+            width: 100%; /* Take full width of parent */
+            height: 4rem; /* Fixed height for the icon area */
+            margin-bottom: 0.2rem; /* Space between icon area and count */
+        }
+
+        /* Make the actual Material Icon larger to serve as background */
+        .folder-nav-button .material-icons.folder-icon {
+            font-size: 4.6rem; /* MODIFIED: Larger size for the folder icon (+20%) */
+            color: rgba(156, 163, 175, 0.7); /* Greyish color for the folder icon */
+            transition: color 0.2s ease;
+        }
+        /* Make the size of trsh folder smaller */
+        .trash-nav-link .material-icons.folder-icon {
+            font-size: 3.2rem; /* or any smaller size you want */
+        }
+
+
+
+        /* Dark theme adjustment for folder icon color */
+        body[data-theme='dark'] .folder-nav-button .material-icons.folder-icon {
+            color: rgba(107, 114, 128, 0.7); /* Darker grey for dark theme */
+        }
+        /* Hover effect on folder icon */
+        body[data-theme='light'] .folder-nav-button:hover .material-icons.folder-icon {
+            color: rgba(79, 70, 229, 0.8); /* Indigo on hover for light theme */
+        }
+        body[data-theme='dark'] .folder-nav-button:hover .material-icons.folder-icon {
+            color: rgba(79, 70, 229, 0.8); /* Indigo on hover for dark theme */
+        }
+
+        /* Text overlay for folder name */
+        .folder-name-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.8rem; /* Smaller font for the name inside */
+            font-weight: 600; /* Make it bold for readability */
+            color: #fff; /* White text for contrast over dark icon */
+            white-space: nowrap; /* Prevent wrapping */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 80%; /* Limit width to prevent overflow */
+            text-align: center;
+            pointer-events: none; /* Allow clicks to pass through to the link */
+            transition: color 0.2s ease;
+        }
+        /* Dark theme adjustment for folder name overlay */
+        body[data-theme='dark'] .folder-name-overlay {
+            color: #e2e8f0; /* Lighter color for dark theme */
+        }
+        body[data-theme='light'] .folder-name-overlay {
+            color: #2d3748; /* Darker color for light theme */
+        }
+
+        /* Adjust item-count font size */
+        .item-count {
+            font-size: 0.65rem; /* Slightly smaller font size for count */
+            margin-top: 0.1rem;
+            line-height: 1;
+            transition: color 0.3s ease;
+        }
+
+
+        .gallery-item {
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            cursor: pointer; /* Indicate clickable */
+            position: relative; /* For play icon overlay and delete button */
+        }
+        /* Gallery-item Dark Theme */
+        body[data-theme='dark'] .gallery-item {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Added shadow to thumbnails */
+        }
+        body[data-theme='dark'] .gallery-item:hover {
+            transform: scale(1.03);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5); /* Enhanced shadow on hover */
+        }
+        .gallery-item img, .gallery-item video {
+            width: 100%;
+            height: 230px; /* Changed height to 200px */
+            object-fit: cover; /* Ensures media covers the area without distortion */
+            border-radius: 12px;
+        }
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 400;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            transition: color 0.3s ease;
+        }
+        /* Section-title Dark Theme */
+        body[data-theme='dark'] .section-title {
+            color: #cbd5e0; /* Lighter text for titles */
+        }
+        .breadcrumb {
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+            display: flex; /* Use flexbox for breadcrumb content */
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+            align-items: center; /* Align items vertically */
+            justify-content: center; /* Changed from space-between to center */
+            gap: 1rem; /* Gap between breadcrumb path and buttons */
+            position: relative; /* Added for absolute positioning of its child */
+            transition: color 0.3s ease;
+        }
+        /* Breadcrumb Dark Theme */
+        body[data-theme='dark'] .breadcrumb {
+            color: #a0aec0; /* Lighter grey for breadcrumb */
+        }
+        /* Removed .breadcrumb-path-container as it's now breadcrumbPathContent */
+        /* Style for the breadcrumb separator */
+        .breadcrumb-separator {
+            margin: 0 0.5rem; /* Adjust margin */
+            font-weight: normal; /* Ensure it's not bold */
+            font-size: 1.5rem; /* Make arrows larger to match new button size */
+            transition: color 0.3s ease;
+            vertical-align: middle; /* Align with middle of the new buttons */
+        }
+        /* Breadcrumb-separator Dark Theme */
+        body[data-theme='dark'] .breadcrumb-separator {
+            color: #e2e8f0 !important; /* White and important */
+        }
+        /* Custom scrollbar for gallery */
+        .gallery-grid {
+            /* Removed overflow-y: scroll; and padding-right: 15px; */
+        }
+        /* Removed custom scrollbar styling for .gallery-grid as it will no longer have its own scrollbar */
+        /* .gallery-grid::-webkit-scrollbar {
+            width: 8px;
+        }
+        .gallery-grid::-webkit-scrollbar-track {
+            background: #2d3748;
+            border-radius: 10px;
+        }
+        .gallery-grid::-webkit-scrollbar-thumb {
+            background: #6a768f;
+            border-radius: 10px;
+        }
+        .gallery-grid::-webkit-scrollbar-thumb:hover {
+            background: #8892b0;
+        } */
+
+        /* MODIFIED: Add alignment to folder containers */
+        #topLevelFoldersContainer, #subFoldersContainer {
+            align-items: center;
+        }
+
+        /* Lightbox/Modal Styles */
+        .lightbox-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000; /* Ensure it's on top */
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease, background-color 0.3s ease;
+        }
+        /* Lightbox-overlay Dark Theme */
+        body[data-theme='dark'] .lightbox-overlay {
+            background-color: rgba(0, 0, 0, 0.95); /* Even darker background for lightbox */
+        }
+        .lightbox-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        /* Removed .lightbox-content class as it was redundant with #lightboxMediaDisplay */
+        /* .lightbox-content {
+            position: relative;
+            max-width: 90vw;
+            max-height: 90vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        } */
+
+        /* The media-display class is now only applied to the actual img/video element */
+        .media-display { /* Removed .lightbox-content prefix */
+            max-width: 100%; /* Image/video will scale to 100% of its parent's width */
+            max-height: 100%; /* Image/video will scale to 100% of its parent's height */
+            object-fit: contain; /* Ensures media fits within the box while maintaining aspect ratio */
+            border-radius: 8px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7); /* Stronger shadow for lightbox media */
+            width: auto; /* Allow intrinsic width */
+            height: auto; /* Allow intrinsic height */
+            /* Added for cross-fade: ensures elements are positioned over each other */
+            position: absolute; 
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        /* Specific rule for video elements within media-display to ensure they fill space */
+        .media-display video { /* Removed .lightbox-content prefix */
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Maintain aspect ratio */
+        }
+        .lightbox-nav-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 1rem 0.8rem;
+            cursor: pointer;
+            font-size: 2rem;
+            border-radius: 8px;
+            user-select: none; /* Prevent text selection */
+            opacity: 0;
+            transition: opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+            z-index: 1010; /* Above the media */
+        }
+        /* Lightbox-nav-arrow Dark Theme */
+        body[data-theme='dark'] .lightbox-nav-arrow {
+            background-color: rgba(255, 255, 255, 0.1); /* Lighter background for arrows */
+            color: white;
+        }
+        body[data-theme='dark'] .lightbox-nav-arrow:hover {
+            background-color: rgba(255, 255, 255, 0.2); /* Lighter on hover */
+        }
+        .lightbox-overlay:hover .lightbox-nav-arrow {
+            opacity: 1; /* Show arrows on hover over the entire overlay */
+        }
+        .lightbox-nav-arrow.left {
+            left: 10px;
+        }
+        .lightbox-nav-arrow.right {
+            right: 10px;
+        }
+        /* Lightbox Close Button (now part of the action buttons container) */
+        .lightbox-close-btn { /* New class for the close button when part of the stack */
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 1010;
+            opacity: 0.7;
+            transition: opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+            padding: 0;
+            border: none;
+            font-size: 2.5rem; /* Match original size */
+            font-weight: normal; /* Ensure it's not bold */
+        }
+        /* Lightbox-close-btn Dark Theme */
+        body[data-theme='dark'] .lightbox-close-btn {
+            color: #e2e8f0; /* Light text color for icons */
+            background-color: rgba(255, 255, 255, 0.1); /* Light background for close button */
+        }
+        body[data-theme='dark'] .lightbox-close-btn:hover {
+            opacity: 1;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+
+        /* Play icon for video thumbnails */
+        .video-thumbnail-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.3); /* Slight overlay */
+            pointer-events: none; /* Allow clicks to pass through to the parent gallery-item */
+            border-radius: 8px;
+        }
+        .video-thumbnail-overlay::before {
+            content: '▶'; /* Play icon */
+            font-size: 3rem;
+            color: rgba(255, 255, 255, 0.8);
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Delete button styles for thumbnail */
+        .delete-thumbnail-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background-color: rgba(220, 38, 38, 0.8); /* Red background */
+            color: white;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10; /* Above the image/video */
+            opacity: 0; /* Hidden by default */
+            transition: opacity 0.2s ease, background-color 0.2s ease;
+        }
+        .gallery-item:hover .delete-thumbnail-btn {
+            opacity: 1; /* Show on hover */
+        }
+        .delete-thumbnail-btn:hover {
+            background-color: rgba(220, 38, 38, 1); /* Darker red on hover */
+        }
+
+        /* Circular action button base style */
+        .circular-action-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 1010;
+            opacity: 0.7;
+            transition: opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+            padding: 0;
+            border: none;
+            box-shadow: none; /* No shadow */
+        }
+        /* Circular-action-btn Dark Theme */
+        body[data-theme='dark'] .circular-action-btn {
+            color: #e2e8f0; /* Light text color for icons */
+            background-color: rgba(79, 70, 229, 0.4); /* Default blue background for slideshow */
+        }
+        body[data-theme='dark'] .circular-action-btn:hover {
+            opacity: 1;
+            background-color: rgba(79, 70, 229, 0.8); /* Darker blue on hover */
+        }
+
+        /* MODIFIED: Specific style for the home button in breadcrumbs to match height */
+        .home-breadcrumb-btn {
+            width: 40px !important;
+            height: 40px !important;
+            padding: 0 !important;
+            font-size: 1.2rem;
+            background-color: transparent !important;
+            box-shadow: none !important;
+        }
+        /* Adjust icon size within this button */
+        .home-breadcrumb-btn .material-icons {
+            font-size: 3rem !important;
+            line-height: 1;
+        }
+        .home-breadcrumb-btn .folder-name-overlay {
+            display: none;
+        }
+
+        /* Specific styles for trash and restore buttons */
+        .trash-delete-btn-style {
+            background-color: rgba(220, 38, 38, 0.4); /* Red background */
+        }
+        .trash-delete-btn-style:hover {
+            background-color: rgba(220, 38, 38, 0.8); /* Darker red on hover */
+        }
+        .trash-restore-btn-style {
+            background-color: rgba(52, 211, 153, 0.4); /* Green background */
+        }
+        .trash-restore-btn-style:hover {
+            background-color: rgba(16, 185, 129, 0.8); /* Darker green on hover */
+        }
+
+        /* Icon sizing for delete/restore */
+        .trash-delete-btn-style .material-icons,
+        .trash-restore-btn-style .material-icons {
+            font-size: 1.5rem; /* Adjusted to match Material Icons visual size */
+        }
+        /* Material Icons for Play/Pause buttons */
+        .slideshow-btn-style .material-icons {
+            font-size: 2.5rem; /* Larger font size for play/pause icons */
+        }
+
+        /* Custom Confirmation Modal */
+        .confirmation-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000; /* Above lightbox */
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .confirmation-modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .confirmation-modal-content {
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+        }
+        /* Confirmation-modal-content Dark Theme */
+        body[data-theme='dark'] .confirmation-modal-content {
+            background-color: #2d3748;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+            color: #e2e8f0;
+        }
+        body[data-theme='light'] .confirmation-modal-content {
+            background-color: #ffffff;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            color: #2d3748;
+        }
+        .confirmation-modal-content h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            transition: color 0.3s ease;
+        }
+        /* Confirmation-modal-content h3 Dark Theme */
+        body[data-theme='dark'] .confirmation-modal-content h3 {
+            color: #cbd5e0;
+        }
+        .confirmation-modal-content p {
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+        .confirmation-modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+        .confirmation-modal-buttons button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .confirmation-modal-buttons .confirm-btn {
+            background-color: #dc2626; /* Red */
+            color: white;
+        }
+        .confirmation-modal-buttons .confirm-btn:hover {
+            background-color: #ef4444; /* Lighter red */
+        }
+        .confirmation-modal-buttons .cancel-btn {
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        /* Confirmation-modal-buttons cancel-btn Dark Theme */
+        body[data-theme='dark'] .confirmation-modal-buttons .cancel-btn {
+            background-color: #4a5568; /* Darker grey */
+            color: #e2e8f0;
+        }
+        body[data-theme='dark'] .confirmation-modal-buttons .cancel-btn:hover {
+            background-color: #6a768f; /* Lighter grey */
+        }
+
+        /* New style for Trash button in year navigation */
+        .trash-nav-link {
+            transition: background-color 0.2s ease;
+        }
+        /* Trash-nav-link Dark Theme */
+        body[data-theme='dark'] .trash-nav-link {
+            background-color: #6b7280; /* A darker grey, slightly different from regular nav-link */
+        }
+        body[data-theme='dark'] .trash-nav-link:hover {
+            background-color: #4b5563; /* Even darker on hover */
+        }
+        
+        /* MODIFIED: Hide the text overlay for the trash folder icon */
+        .trash-nav-link .folder-name-overlay {
+            display: none;
+        }
+
+        /* Slideshow fade-in effect */
+        .fade-in {
+            animation: fadeIn 0.8s ease-in-out forwards; /* forwards keeps the element at opacity 1 after animation */
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* New: Slideshow fade-out effect */
+        .fade-out {
+            animation: fadeOut 0.8s ease-out forwards; /* forwards keeps the element at opacity 0 after animation */
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        /* Lightbox filename display */
+        #lightboxFilename {
+            position: absolute;
+            top: 20px; /* Adjusted from -40px to 20px to make it visible */
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.9rem; /* Small font size */
+            font-weight: 500;
+            z-index: 1010; /* Above media, below close/delete buttons */
+            max-width: calc(100% - 100px); /* Limit width to prevent overlap with buttons on both sides */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: color 0.3s ease, text-shadow 0.3s ease;
+        }
+        /* LightboxFilename Dark Theme */
+        body[data-theme='dark'] #lightboxFilename {
+            color: rgba(255, 255, 255, 0.8);
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+        /* Icon styling for play/pause buttons */
+        .play_icon, .pause_icon, .light_mode_icon, .dark_mode_icon {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .material-icons {
+            font-family: 'Material Icons';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px; /* Default size for Material Icons */
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-feature-settings: 'liga';
+            -webkit-font-smoothing: antialiased;
+        }
+        /* Style for the item count text */
+        .item-count {
+            font-size: 0.65rem; /* Even smaller font size for count */
+            margin-top: 0.1rem; /* Even smaller margin above the count */
+            line-height: 1; /* Ensure minimal line height */
+            transition: color 0.3s ease;
+        }
+        /* Item-count Dark Theme */
+        body[data-theme='dark'] .item-count {
+            color: #a0aec0;
+        }
+
+        /* New CSS for fade-in effect on thumbnails */
+        .thumbnail-fade-in {
+            opacity: 0;
+            transition: opacity 0.7s ease-in;
+        }
+        .thumbnail-fade-in.loaded {
+            opacity: 1;
+        }
+
+        /* Positioning for action buttons within the lightbox overlay */
+        #lightboxActionButtonsContainer {
+            position: absolute;
+            top: 15px; /* Aligned with the top of the lightbox */
+            right: 25px; /* Aligned with the right of the lightbox */
+            display: flex;
+            flex-direction: column; /* Stack buttons vertically */
+            gap: 10px; /* Space between buttons */
+            z-index: 1010; /* Ensure they are on top */
+            align-items: flex-end; /* Align items to the right within the column */
+        }
+        /* Positioning for action buttons in the breadcrumb area */
+        #breadcrumbActionButtonsContainer {
+            position: absolute; /* Changed to absolute positioning */
+            top: 14px; /* Adjusted to be near the top right of the container */
+            right: 10px; /* Adjusted to be near the top right of the container */
+            display: flex;
+            flex-direction: column; /* Changed to column for vertical stacking */
+            gap: 10px; /* Space between buttons */
+            align-items: center; /* Horizontally align items in the column */
+            z-index: 500; /* Ensure it's above other breadcrumb content if needed */
+        }
+
+        /* Loading spinner styles */
+        .loading-spinner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent background */
+            z-index: 999; /* Below media, above arrows */
+            border-radius: 8px;
+            transition: opacity 0.3s ease;
+        }
+        .loading-spinner .material-icons {
+            font-size: 4rem; /* Large icon */
+            animation: spin 1.5s linear infinite; /* Spin animation */
+            transition: color 0.3s ease;
+        }
+        .loading-spinner p {
+            margin-top: 1rem;
+            font-size: 1.2rem;
+            transition: color 0.3s ease;
+        }
+        /* Loading-spinner Dark Theme */
+        body[data-theme='dark'] .loading-spinner .material-icons,
+        body[data-theme='dark'] .loading-spinner p {
+            color: #333333; /* Blue color */
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* New styles for #lightboxMediaDisplay to ensure proper sizing */
+        #lightboxMediaDisplay {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative; /* Needed for spinner positioning and absolute positioning of media-display */
+            /* Reverted to 90vw and 90vh as per user request */
+            max-width: 90vw;
+            max-height: 90vh;            
+        }
+
+        /* --- Light Theme Overrides --- */
+        body[data-theme='light'] {
+            background-color: #f7fafc; /* Light background */
+            color: #2d3748; /* Dark text */
+        }
+        body[data-theme='light'] h1 {
+            color: #1a202c; /* Darker color for light theme heading */
+        }
+        body[data-theme='light'] .container {
+            background-color: #ffffff;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        body[data-theme='light'] .nav-link {
+            background-color: #e2e8f0;
+            color: #4a5568;
+        }
+        body[data-theme='light'] .nav-link:hover {
+            background-color: #cbd5e0;
+            color: #2d3748;
+        }
+        body[data-theme='light'] .section-title {
+            color: #2d3748;
+        }
+        body[data-theme='light'] .breadcrumb {
+            color: #718096;
+        }
+        body[data-theme='light'] .breadcrumb-separator {
+            color: #4a5568 !important;
+        }
+        body[data-theme='light'] .gallery-item {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* Slight shadow for light theme tiles */
+        }
+        body[data-theme='light'] .gallery-item:hover {
+            transform: scale(1.03);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5); /* Enhanced shadow on hover */
+        }
+        body[data-theme='light'] .lightbox-overlay {
+            background-color: rgba(255, 255, 255, 0.95); /* Lighter background for lightbox */
+        }
+        body[data-theme='light'] .lightbox-nav-arrow {
+            background-color: rgba(0, 0, 0, 0.1);
+            color: black;
+        }
+        body[data-theme='light'] .lightbox-nav-arrow:hover {
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+        body[data-theme='light'] .lightbox-close-btn {
+            background-color: rgba(0, 0, 0, 0.1);
+            color: #2d3748;
+        }
+        body[data-theme='light'] .lightbox-close-btn:hover {
+            opacity: 1;
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+        body[data-theme='light'] .circular-action-btn {
+            background-color: rgba(79, 70, 229, 0.2); /* Lighter blue for light theme */
+            color: #2d3748;
+        }
+        body[data-theme='light'] .circular-action-btn:hover {
+            background-color: rgba(79, 70, 229, 0.5);
+        }
+        body[data-theme='light'] .trash-delete-btn-style {
+            background-color: rgba(220, 38, 38, 0.2);
+        }
+        body[data-theme='light'] .trash-delete-btn-style:hover {
+            background-color: rgba(220, 38, 38, 0.5);
+        }
+        body[data-theme='light'] .trash-restore-btn-style {
+            background-color: rgba(52, 211, 153, 0.2);
+        }
+        body[data-theme='light'] .trash-restore-btn-style:hover {
+            background-color: rgba(52, 211, 153, 0.5);
+        }
+        body[data-theme='light'] .confirmation-modal-content {
+            background-color: #ffffff;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            color: #2d3748;
+        }
+        body[data-theme='light'] .confirmation-modal-content h3 {
+            color: #2d3748;
+        }
+        body[data-theme='light'] .confirmation-modal-buttons .cancel-btn {
+            background-color: #e2e8f0;
+            color: #4a5568;
+        }
+        body[data-theme='light'] .confirmation-modal-buttons .cancel-btn:hover {
+            background-color: #cbd5e0;
+            color: #2d3748;
+        }
+        body[data-theme='light'] .loading-spinner .material-icons,
+        body[data-theme='light'] .loading-spinner p {
+            color: #a0aec0; /* Lighter grey for spinner in light theme */
+        }
+        body[data-theme='light'] #lightboxFilename {
+            color: rgba(0, 0, 0, 0.8);
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+        }
+        body[data-theme='light'] .item-count {
+            color: #718096;
+        }
+        body[data-theme='light'] .trash-nav-link {
+            background-color: #a0aec0;
+        }
+        body[data-theme='light'] .trash-nav-link:hover {
+            background-color: #cbd5e0;
+        }
+
+        /* Drag and Drop styles */
+        .drag-over {
+            border: 3px dashed #6366f1; /* Indigo dashed border */
+            background-color: rgba(99, 102, 241, 0.1); /* Light indigo background */
+        }
+        /* Message Box styles */
+        #messageBox {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 44px 15px rgba(0, 0, 0, 0.2);
+            z-index: 2000; /* Above everything else */
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            font-size: 0.9rem;
+            min-width: 250px;
+            text-align: center;
+        }
+        #messageBox.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* MODIFIED: New style for the square 'Create New Folder' button */
+        .add-folder-square-btn {
+            width: 40px !important;
+            height: 40px !important;
+            min-width: 40px !important; /* Override folder-nav-button min-width */
+            padding: 0 !important;
+            /* The following are inherited from nav-link but good to be explicit */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .add-folder-square-btn .material-icons {
+            font-size: 1.8rem; /* Adjust icon size to fit nicely */
+            margin: 0; /* Remove any potential margins */
+        }
+
+
+        /* Create Folder Modal */
+        .create-folder-modal-overlay { /* Changed ID to class for consistency */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .create-folder-modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .create-folder-modal-content { /* Changed ID to class for consistency */
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+        }
+        body[data-theme='dark'] .create-folder-modal-content {
+            background-color: #2d3748;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+            color: #e2e8f0;
+        }
+        body[data-theme='light'] .create-folder-modal-content {
+            background-color: #ffffff;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            color: #2d3748;
+        }
+        .create-folder-modal-content h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .create-folder-modal-content input {
+            width: calc(100% - 2rem); /* Full width minus padding */
+            padding: 0.75rem;
+            margin-bottom: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        body[data-theme='dark'] .create-folder-modal-content input {
+            background-color: #4a5568;
+            border-color: #6a768f;
+            color: #e2e8f0;
+        }
+        .create-folder-modal-content .modal-buttons button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            margin: 0 0.5rem;
+        }
+        .create-folder-modal-content .modal-buttons .confirm-btn {
+            background-color: #4f46e5; /* Indigo */
+            color: white;
+        }
+        .create-folder-modal-content .modal-buttons .confirm-btn:hover {
+            background-color: #6366f1;
+        }
+        .create-folder-modal-content .modal-buttons .cancel-btn {
+            background-color: #e2e8f0;
+            color: #4a5568;
+        }
+        body[data-theme='dark'] .create-folder-modal-content .modal-buttons .cancel-btn {
+            background-color: #6a768f;
+            color: #e2e8f0;
+        }
+        body[data-theme='dark'] .create-folder-modal-content .modal-buttons .cancel-btn:hover {
+            background-color: #8892b0;
+        }
+
+        /* Upload Progress Modal */
+        #uploadProgressModalOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        #uploadProgressModalOverlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        #uploadProgressModalContent {
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+        }
+        body[data-theme='dark'] #uploadProgressModalContent {
+            background-color: #2d3748;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+            color: #e2e8f0;
+        }
+        body[data-theme='light'] #uploadProgressModalContent {
+            background-color: #ffffff;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            color: #2d3748;
+        }
+        #uploadProgressModalContent h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        #uploadList {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 0.5rem;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        body[data-theme='dark'] #uploadList {
+            background-color: #4a5568;
+            border-color: #6a768f;
+            color: #e2e8f0;
+        }
+        #uploadList li {
+            text-align: left;
+            padding: 0.2rem 0;
+            border-bottom: 1px solid #eee;
+        }
+        #uploadList li:last-child {
+            border-bottom: none;
+        }
+        #overallProgressBarContainer {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            margin-top: 1rem;
+            height: 15px;
+            overflow: hidden;
+        }
+        body[data-theme='dark'] #overallProgressBarContainer {
+            background-color: #4a5568;
+        }
+        #overallProgressBar {
+            height: 100%;
+            width: 0%;
+            background-color: #4f46e5; /* Indigo */
+            border-radius: 5px;
+            text-align: center;
+            color: white;
+            transition: width 0.3s ease;
+        }
+        #overallProgressText {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+        #uploadProgressModalContent .modal-buttons {
+            margin-top: 1.5rem;
+        }
+        /* Styling for the modal buttons to ensure they look like buttons */
+        #uploadProgressModalContent .modal-buttons button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            margin: 0 0.5rem;
+            border: none; /* Ensure no default button border */
+        }
+        #uploadProgressModalContent .modal-buttons .confirm-btn {
+            background-color: #4f46e5; /* Indigo */
+            color: white;
+        }
+        #uploadProgressModalContent .modal-buttons .confirm-btn:hover {
+            background-color: #6366f1;
+        }
+        #uploadProgressModalContent .modal-buttons .cancel-btn {
+            background-color: #e2e8f0;
+            color: #4a5568;
+        }
+        body[data-theme='dark'] #uploadProgressModalContent .modal-buttons .cancel-btn {
+            background-color: #6a768f;
+            color: #e2e8f0;
+        }
+        body[data-theme='dark'] .uploadProgressModalContent .modal-buttons .cancel-btn:hover {
+            background-color: #8892b0;
+        }
+
+        /* NEW: Delete Folder Button Styles */
+        .delete-folder-btn {
+            position: absolute;
+            top: -5px; /* Adjust as needed for positioning */
+            right: -5px; /* Adjust as needed for positioning */
+            background-color: rgba(220, 38, 38, 0.8); /* Red background */
+            color: white;
+            border-radius: 50%;
+            width: 24px; /* Smaller default size */
+            height: 24px; /* Smaller default size */
+            max-width: 24px; /* Smaller default size */
+            max-height: 24px; /* Smaller default size */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.9rem ; /* Smaller icon size */
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10; /* Above the folder link */
+            opacity: 0; /* Hidden by default */
+            transform: scale(1); /* Initial scale */
+            transition: opacity 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+        }
+        /* Show and grow on hover over the parent folder-nav-button */
+        .folder-nav-button:hover .delete-folder-btn {
+            opacity: 1;
+            transform: scale(1.2); /* Grow by 50% */
+        }
+        .delete-folder-btn:hover {
+            background-color: rgba(220, 38, 38, 1); /* Darker red on hover */
+        }
+        /* Ensure the icon within the delete button is centered and sized correctly */
+        .delete-folder-btn .material-icons {
+            font-size: 1.2rem ; /* Adjust icon size within the button */
+        }

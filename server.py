@@ -1,3 +1,12 @@
+
+######## YOUR SETUP #############
+
+PORT=8080 # Flask server port number
+GALLERY='/Volumes/aa3025_bkp/Photos_Backup' # all the gallery files are here
+
+#################################
+
+
 import os
 import json
 import shutil
@@ -27,7 +36,7 @@ app = Flask(__name__)
 # --- Configuration ---
 # IMPORTANT: Set this to the ABSOLUTE path of your main photo library folder.
 # Example: If your photos are in '/Users/YourUser/Pictures/MyGallery', set BASE_DIR to that.
-image_library_root = os.path.abspath('/Volumes/aa3025_bkp/Photos_Backup') # User should update this!
+image_library_root = os.path.abspath(GALLERY) # User should update this!
 
 TRASH_FOLDER_NAME = '_Trash' # Must match frontend
 TRASH_ROOT = os.path.join(image_library_root, TRASH_FOLDER_NAME) # Absolute path to trash
@@ -379,7 +388,7 @@ def _get_media_files_in_directory(path, include_subfolders=False):
 @app.route('/')
 def index():
     """Serves the main HTML page."""
-    return send_from_directory('.', 'index.html')
+    return send_from_directory('static', 'index.html')
 
 # MODIFIED: Unified endpoint for browsing folders
 @app.route('/api/folders', defaults={'path': ''})
@@ -1021,4 +1030,4 @@ def restore_file_logic(file_relative_path_in_trash):
 
 if __name__ == '__main__':
     _initial_scan_and_populate_counts() # Run initial scan on startup
-    app.run(host='0.0.0.0', debug=True, port=8080)
+    app.run(host='0.0.0.0', debug=True, port=PORT)
