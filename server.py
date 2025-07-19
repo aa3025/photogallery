@@ -2,7 +2,7 @@
 ######## YOUR SETUP #############
 
 PORT=8080 # Flask server port number
-GALLERY='/Volumes/aa3025_bkp/Photos_Backup' # all the gallery files are here
+GALLERY='/absolute/path/to/my/gallery' # all the gallery files should be here, with write permission to who is starting server.py
 
 #################################
 
