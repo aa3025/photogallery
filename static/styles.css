@@ -1161,21 +1161,36 @@
             position: absolute;
             top: 10px;
             left: 10px;
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
             z-index: 10;
             opacity: 0; /* Hidden by default */
             transition: opacity 0.2s ease;
             cursor: pointer;
+            background-color: #333333;
         }
+
+
+
+
         .gallery-item:hover .thumbnail-checkbox,
         .gallery-item.selected .thumbnail-checkbox {
             opacity: 1; /* Show on hover or when selected */
         }
-        .gallery-item.selected img {
-            border: 3px solid #4f46e5; /* Indigo border for selected items */
+        body[data-theme='light'] .gallery-item.selected img {
+            border: 3px solid #333333; /* Indigo border for selected items */
             box-shadow: 0 0 15px rgba(79, 70, 229, 0.5);
         }
+        body[data-theme='dark'] .gallery-item.selected img {
+            border: 3px solid #cccccc; /* Indigo border for selected items */
+            box-shadow: 0 0 15px rgba(79, 70, 229, 0.5);
+        }
+
+        .thumbnail-checkbox:checked {
+            background-color: green;
+            accent-color: green; 
+        }
+
         .selected-count-badge {
             position: absolute;
             top: -5px;
