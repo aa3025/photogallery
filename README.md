@@ -1,5 +1,7 @@
 # 📸 Photo & Video Gallery
 
+
+
 A self-hosted, web-based gallery application for browsing and managing a personal library of photos and videos. Built with a Python Flask backend and a modern vanilla JavaScript frontend.
 
 
