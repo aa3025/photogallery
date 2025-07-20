@@ -100,7 +100,7 @@ GALLERY = '/path/to/your/photos'  # Set the ABSOLUTE path to your photo library
 #################################
 ```
 
-**Set Up SSL (for HTTPS):**
+**(Optional) Set Up SSL (for HTTPS):**
 
 Generate a self-signed certificate:
 
