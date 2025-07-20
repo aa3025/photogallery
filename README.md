@@ -60,8 +60,8 @@ Follow these steps to get the gallery running on your local machine.
 **Clone the Repository:**
 
 ```bash
-git clone <your-repository-url>
-cd <your-repository-folder>
+git https://github.com/aa3025/photogallery
+cd photogallery
 ````
 
 **Create `requirements.txt`:**
