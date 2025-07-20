@@ -142,9 +142,9 @@ The server will perform a one-time scan to index your folders.
 Once running, open your browser and visit:
 
 ```
-https://localhost:8080
+http://localhost:8080
 ```
-
+(there is also an option to serve via https://)
 ---
 
 ## 🧪 API Endpoints
