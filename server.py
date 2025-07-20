@@ -1,7 +1,7 @@
 ######## YOUR SETUP #############
 
 PORT=8080 # Flask server port number
-GALLERY='/Volumes/aa3025_bkp/Photos_Backup' # all the gallery files are here
+GALLERY='/absolute/path/to/my/gallery' # all the gallery files are here
 
 #################################
 
@@ -1171,5 +1171,7 @@ def restore_file_logic(file_relative_path_in_trash):
 if __name__ == '__main__':
     _initial_scan_and_populate_counts() # Run initial scan on startup
     # To run without SSL for local dev, comment out the ssl_context line
-    # app.run(host='0.0.0.0', debug=True, port=PORT)
-    app.run(host='0.0.0.0', debug=True, port=PORT, ssl_context=('cert.pem', 'key.pem'))
+    app.run(host='0.0.0.0', debug=True, port=PORT)
+
+    # To run with SSL for local dev (you need to generate two pem files in the server.py directory)
+    # app.run(host='0.0.0.0', debug=True, port=PORT, ssl_context=('cert.pem', 'key.pem'))
