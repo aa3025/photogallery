@@ -109,12 +109,10 @@ To run without HTTPS, open `server.py`, find the last line, and **comment out** 
 
 ### 3. Frontend Setup
 
-Create a folder named `static` in your project root.
-
-Place all frontend files inside it:
+Folder named `static` in your project root contains all frontend files.
 
 ```
-/your-project-folder
+/photogallery
 |-- server.py
 |-- cert.pem
 |-- key.pem
@@ -145,7 +143,7 @@ Once running, open your browser and visit:
 http://localhost:8080
 ```
 
-(there is also an option to serve via https://)
+(there is also an option to serve via https://, see last line of `server.py` file)
 
 ---
 
