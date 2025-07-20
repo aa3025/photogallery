@@ -79,7 +79,7 @@ pillow-heif
 **Install Dependencies:**
 
 ```bash
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
 **Configure `server.py`:**
@@ -132,7 +132,7 @@ Folder named `static` in your project root contains all frontend files.
 In your terminal, from the project root:
 
 ```bash
-python server.py
+python3 server.py
 ```
 
 The server will perform a one-time scan to index your folders.
