@@ -1,8 +1,7 @@
-
 ######## YOUR SETUP #############
 
 PORT=8080 # Flask server port number
-GALLERY='/absolute/path/to/my/gallery' # all the gallery files should be here, with read/write permission to who is starting server.py
+GALLERY='/Volumes/aa3025_bkp/Photos_Backup' # all the gallery files are here
 
 #################################
 
@@ -20,7 +19,7 @@ import numpy as np # For rawpy output and OpenCV frame handling
 try:
     # While pillow_heif handles HEIC via Image.open(), imageio.v3 might be useful for other video/image formats
     # or if pillow_heif encounters issues. Keeping it as an optional import.
-    import imageio.v3 as iio 
+    import imageio.v3 as iio
 except ImportError as e:
     print(f"Warning: 'imageio.v3' could not be imported ({e}). HEIC/other processing might be limited if pillow_heif fails.")
     iio = None # Set iio to None if import fails
@@ -116,7 +115,7 @@ def _get_recursive_media_count(path):
     count = 0
     if not os.path.isdir(path):
         return 0
-    
+
     for root, dirs, files in os.walk(path):
         # Exclude hidden directories like .thumbnails, .previews from traversal
         dirs[:] = [d for d in dirs if not d.startswith('.')]
@@ -125,7 +124,7 @@ def _get_recursive_media_count(path):
         # This ensures counts for years/months/days don't include trashed items
         if TRASH_FOLDER_NAME in os.path.relpath(root, image_library_root).split(os.sep) and root != TRASH_ROOT:
             continue
-        
+
         for file in files:
             if allowed_file(file) and not file.startswith('.') and not file.endswith('.meta'):
                 count += 1
@@ -168,7 +167,7 @@ def _initial_scan_and_populate_counts():
 
         # Update the count for the current directory being walked
         _update_folder_item_count_meta(root)
-            
+
     # Also ensure the trash folder itself has an up-to-date count
     _update_folder_item_count_meta(TRASH_ROOT)
     print("Initial scan complete.")
@@ -247,7 +246,7 @@ def _generate_thumbnail(original_full_path):
                         if ExifTags.TAGS[orientation_tag] == 'Orientation':
                             break
                     else: orientation_tag = None # Ensure orientation_tag is defined even if not found
-                    
+
                     if orientation_tag in exif:
                         orientation = exif[orientation_tag]
                         if orientation == 3: img = img.transpose(Image.ROTATE_180)
@@ -258,9 +257,9 @@ def _generate_thumbnail(original_full_path):
 
         if img.mode in ('RGBA', 'LA', 'P') or img.mode == 'L':
             img = img.convert('RGB')
-        
+
         img.thumbnail((THUMBNAIL_MAX_DIMENSION, THUMBNAIL_MAX_DIMENSION), RESAMPLING_FILTER)
-        
+
         img.save(thumbnail_path, "WEBP", quality=85)
         return thumbnail_path
 
@@ -336,7 +335,7 @@ def _generate_preview(original_full_path):
 
         if img.mode in ('RGBA', 'LA', 'P') or img.mode == 'L':
             img = img.convert('RGB')
-        
+
         img.save(preview_path, "WEBP", quality=85)
         return preview_path
 
@@ -360,7 +359,7 @@ def _get_media_files_in_directory(path, include_subfolders=False):
             dirs[:] = [d for d in dirs if not d.startswith('.')]
 
         current_relative_root_part = os.path.relpath(root, image_library_root)
-        
+
         if TRASH_FOLDER_NAME in current_relative_root_part.split(os.sep) and root != TRASH_ROOT:
             continue
 
@@ -368,7 +367,7 @@ def _get_media_files_in_directory(path, include_subfolders=False):
             if allowed_file(file) and not file.startswith('.') and not file.endswith('.meta'):
                 full_file_path = os.path.join(root, file)
                 relative_file_path = os.path.relpath(full_file_path, image_library_root).replace('\\', '/')
-                
+
                 file_info = {
                     'filename': file,
                     'original_path': relative_file_path,
@@ -378,9 +377,12 @@ def _get_media_files_in_directory(path, include_subfolders=False):
                 thumbnail_full_path = _get_thumbnail_full_path(full_file_path)
                 thumbnail_relative_path = os.path.relpath(thumbnail_full_path, image_library_root).replace('\\', '/')
                 file_info['thumbnail_path'] = thumbnail_relative_path
-                
+
                 media_files.append(file_info)
-    return sorted(media_files, key=lambda x: x['original_path'].lower())
+
+    # UPDATED SORTING LOGIC: Sort by path depth first, then by path name.
+    # This ensures root files appear before files in subdirectories.
+    return sorted(media_files, key=lambda x: (x['original_path'].count('/'), x['original_path'].lower()))
 
 
 # --- API Endpoints ---
@@ -390,12 +392,12 @@ def index():
     """Serves the main HTML page."""
     return send_from_directory('static', 'index.html')
 
-# MODIFIED: Unified endpoint for browsing folders
+# MODIFIED: Unified endpoint for Browse folders
 @app.route('/api/folders', defaults={'path': ''})
 @app.route('/api/folders/<path:path>')
 def get_folders(path):
     """Returns a list of subfolders and files for a given path."""
-    
+
     current_path = os.path.join(image_library_root, path)
     if not os.path.isdir(current_path):
         return jsonify({"error": "Folder not found"}), 404
@@ -423,7 +425,7 @@ def get_folders(path):
 def get_media(relative_path):
     """Serves media files (images, videos, converted RAW/HEIC for display)."""
     full_path = os.path.abspath(os.path.join(image_library_root, relative_path))
-    
+
     if not full_path.startswith(image_library_root):
         return jsonify({"error": "Forbidden"}), 403
 
@@ -452,7 +454,7 @@ def get_media(relative_path):
 def get_thumbnail(relative_path):
     """Serves thumbnails for images and RAW files."""
     full_media_path = os.path.abspath(os.path.join(image_library_root, relative_path))
-    
+
     if not full_media_path.startswith(image_library_root):
         return jsonify({"error": "Forbidden"}), 403
 
@@ -488,7 +490,7 @@ def get_recursive_media(path_segments):
 def download_original_raw(relative_path):
     """Allows downloading of original RAW/HEIC files."""
     full_path = os.path.abspath(os.path.join(image_library_root, relative_path))
-    
+
     if not full_path.startswith(image_library_root):
         return jsonify({"error": "Forbidden"}), 403
 
@@ -518,7 +520,7 @@ def get_trash_content():
             if os.path.splitext(file)[1].lower() in ALL_MEDIA_EXTENSIONS:
                 full_file_path = os.path.join(root, file)
                 relative_path_in_trash = os.path.relpath(full_file_path, TRASH_ROOT)
-                
+
                 info = {
                     'filename': file,
                     'relative_path_in_trash': os.path.join(TRASH_FOLDER_NAME, relative_path_in_trash).replace('\\', '/'),
@@ -537,16 +539,16 @@ def get_trash_content():
                         info['original_path_from_metadata'] = 'Error Reading Metadata'
                 else:
                     info['original_path_from_metadata'] = 'Metadata Missing'
-                
+
                 trash_files.append(info)
-    
+
     # Sort by filename
     trash_files.sort(key=lambda x: x['filename'].lower())
-    
+
     count = _read_folder_item_count(TRASH_ROOT)
     if count is None: # Fallback if read fails
         count = len(trash_files)
-    
+
     return jsonify({'files': trash_files, 'count': count})
 
 
@@ -592,7 +594,7 @@ def move_to_trash():
             trashed_thumb_full_path = os.path.join(trash_thumbnail_dir, trashed_thumb_filename)
             shutil.move(original_thumbnail_full_path, trashed_thumb_full_path)
             trashed_thumbnail_relative_path = os.path.relpath(trashed_thumb_full_path, image_library_root).replace('\\', '/')
-            
+
             # Clean up empty thumbnail directory
             thumb_dir = os.path.dirname(original_thumbnail_full_path)
             if os.path.exists(thumb_dir) and not os.listdir(thumb_dir):
@@ -624,7 +626,7 @@ def move_to_trash():
             metadata['trashed_thumbnail_path'] = trashed_thumbnail_relative_path
         if trashed_preview_relative_path:
             metadata['trashed_preview_path'] = trashed_preview_relative_path
-        
+
         metadata_file_path = f"{trash_full_path}.meta"
         with open(metadata_file_path, 'w') as f:
             json.dump(metadata, f, indent=4)
@@ -677,13 +679,13 @@ def delete_file_forever():
         # Delete the metadata file
         if os.path.exists(metadata_file_path):
             os.remove(metadata_file_path)
-        
+
         # Delete the associated thumbnail if it exists and is in trash
         if trashed_thumbnail_path:
             full_trashed_thumbnail_path = os.path.abspath(os.path.join(image_library_root, trashed_thumbnail_path))
             if os.path.exists(full_trashed_thumbnail_path) and full_trashed_thumbnail_path.startswith(TRASH_ROOT):
                 os.remove(full_trashed_thumbnail_path)
-        
+
         # Delete the associated preview if it exists and is in trash
         if trashed_preview_path:
             full_trashed_preview_path = os.path.abspath(os.path.join(image_library_root, trashed_preview_path))
@@ -714,64 +716,26 @@ def _restore_associated_file(final_restore_path, trashed_associated_path, path_g
 
 @app.route('/api/restore_file', methods=['POST'])
 def restore_file():
-    """Restores a file from TRASH_ROOT to its original location, recreating folders if needed."""
+    """Restores a file from TRASH_ROOT to its original location, and updates counts."""
     data = request.get_json()
     file_relative_path_in_trash = data.get('path')
 
     if not file_relative_path_in_trash:
         return jsonify({"error": "Path not provided"}), 400
 
-    source_full_path_in_trash = os.path.abspath(os.path.join(image_library_root, file_relative_path_in_trash))
-    if not source_full_path_in_trash.startswith(TRASH_ROOT):
-        return jsonify({"error": "Forbidden: Attempted to restore file outside of trash folder."}), 403 # Forbidden
-
-    if not os.path.exists(source_full_path_in_trash):
-        return jsonify({"error": "File not found in trash"}), 404
-
-    metadata_file_path = f"{source_full_path_in_trash}.meta"
-    if not os.path.exists(metadata_file_path):
-        return jsonify({"error": "Metadata for file not found in trash"}), 404
-
-    with open(metadata_file_path, 'r') as f:
-        metadata = json.load(f)
-    original_relative_path = metadata.get('original_path')
-    trashed_thumbnail_path = metadata.get('trashed_thumbnail_path') # Get the path of the thumbnail *in trash*
-    trashed_preview_path = metadata.get('trashed_preview_path') # Get the path of the preview *in trash*
-
-
-    if not original_relative_path:
-        return jsonify({"error": "Original path not found in metadata. Cannot restore."}), 500
-
-    original_full_path = os.path.abspath(os.path.join(image_library_root, original_relative_path))
-    original_directory = os.path.dirname(original_full_path)
-
     try:
-        os.makedirs(original_directory, exist_ok=True)
-        
-        # Handle potential filename conflict at destination
-        final_restore_path = original_full_path
-        if os.path.exists(original_full_path):
-            base_name, ext = os.path.splitext(original_relative_path)
-            timestamp = datetime.now().strftime("_%Y%m%d%H%M%S")
-            dir_name = os.path.dirname(original_relative_path)
-            new_filename = f"{os.path.basename(base_name)}{timestamp}{ext}"
-            final_restore_path = os.path.abspath(os.path.join(image_library_root, dir_name, new_filename))
+        # The main logic is now in a helper function
+        final_restore_path = restore_file_logic(file_relative_path_in_trash)
 
-        # MODIFIED: Restore associated files FIRST to make the operation more robust.
-        # If moving these fails, the main file remains safely in the trash.
-        _restore_associated_file(final_restore_path, trashed_thumbnail_path, _get_thumbnail_full_path)
-        _restore_associated_file(final_restore_path, trashed_preview_path, _get_preview_full_path)
-
-        # Now, move the main file
-        shutil.move(source_full_path_in_trash, final_restore_path)
-
-        os.remove(metadata_file_path)
-
+        # This endpoint is responsible for updating counts for a single restore
         _update_folder_item_count_meta(TRASH_ROOT)
         _update_folder_item_count_meta(os.path.dirname(final_restore_path))
 
-
         return jsonify({"message": "File restored successfully"})
+    except FileNotFoundError as e:
+        return jsonify({"error": str(e)}), 404
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 500
     except Exception as e:
         print(f"ERROR: Error restoring file: {type(e).__name__}: {e}")
         return jsonify({"error": str(e)}), 500
@@ -847,7 +811,7 @@ def upload_file():
         if os.path.splitext(file.filename)[1].lower() in ALLOWED_IMAGE_EXTENSIONS or \
            os.path.splitext(file.filename)[1].lower() in ALLOWED_RAW_EXTENSIONS:
             _generate_thumbnail(file_full_path) # Call helper function
-        
+
         _update_folder_item_count_meta(destination_dir)
 
         # MODIFIED: Correctly format the success message to be more accurate and avoid TypeError
@@ -874,7 +838,7 @@ def delete_folder():
     else:
         print(f"ERROR: Invalid path data type for delete_folder: {type(path_data)}")
         return jsonify({"error": "Invalid path format provided"}), 400
-    
+
     folder_full_path = os.path.abspath(os.path.join(image_library_root, *folder_path_segments))
 
     if not folder_full_path.startswith(image_library_root) or TRASH_ROOT in folder_full_path:
@@ -890,7 +854,7 @@ def delete_folder():
         for file_info in files_to_trash:
             original_relative_path = file_info['original_path']
             original_file_full_path = os.path.abspath(os.path.join(image_library_root, original_relative_path))
-            
+
             filename = os.path.basename(original_file_full_path)
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
             unique_id = os.urandom(4).hex()
@@ -910,7 +874,7 @@ def delete_folder():
                 trashed_thumb_full_path = os.path.join(TRASH_ROOT, trashed_thumb_filename)
                 shutil.move(original_thumbnail_full_path, trashed_thumb_full_path)
                 trashed_thumbnail_relative_path = os.path.relpath(trashed_thumb_full_path, image_library_root).replace('\\', '/')
-            
+
             # Move associated preview if it exists
             original_preview_full_path = _get_preview_full_path(original_file_full_path)
             trashed_preview_relative_path = None
@@ -931,14 +895,14 @@ def delete_folder():
                 metadata['trashed_thumbnail_path'] = trashed_thumbnail_relative_path
             if trashed_preview_relative_path:
                 metadata['trashed_preview_path'] = trashed_preview_relative_path
-            
+
             metadata_file_path = f"{trash_full_path}.meta"
             with open(metadata_file_path, 'w') as f:
                 json.dump(metadata, f, indent=4)
 
         # After moving all files, remove the now empty original folder structure
         shutil.rmtree(folder_full_path)
-        
+
         # Update counts for affected folders
         # Update parent folder's count
         parent_folder_full_path = os.path.dirname(folder_full_path)
@@ -973,6 +937,7 @@ def empty_trash():
 def restore_all():
     """Restores all files from the trash to their original locations."""
     try:
+        parent_folders_to_update = set()
         for filename in os.listdir(TRASH_ROOT):
             if filename.endswith('.meta'):
                 continue # Skip metadata files in the initial loop
@@ -982,23 +947,193 @@ def restore_all():
                 # Construct the relative path for the restore_file function
                 relative_path_in_trash = os.path.join(TRASH_FOLDER_NAME, filename)
                 # Reuse the single-file restore logic
-                restore_file_logic(relative_path_in_trash)
-        
-        _update_folder_item_count_meta(TRASH_ROOT) # Final count update
+                final_restore_path = restore_file_logic(relative_path_in_trash)
+                parent_folders_to_update.add(os.path.dirname(final_restore_path))
+
+        # Batch update counts
+        for folder in parent_folders_to_update:
+            _update_folder_item_count_meta(folder)
+        _update_folder_item_count_meta(TRASH_ROOT) # Final count update for trash
         return jsonify({"message": "All files have been restored."})
     except Exception as e:
         print(f"ERROR: Error during restore all: {e}")
         return jsonify({"error": "An error occurred during the restore all process."}), 500
 
+# NEW: Endpoint for deleting multiple files
+@app.route('/api/delete_multiple', methods=['POST'])
+def delete_multiple():
+    """Moves multiple files to the trash, or deletes them permanently from the trash."""
+    data = request.get_json()
+    paths = data.get('paths', [])
+    is_permanent = data.get('is_permanent', False)
+
+    if not paths:
+        return jsonify({"error": "No paths provided"}), 400
+
+    success_count = 0
+    fail_count = 0
+
+    # Use a set to track which parent folders need their counts updated
+    parent_folders_to_update = set()
+
+    for path in paths:
+        try:
+            if is_permanent:
+                # Logic for permanent deletion (from trash)
+                full_path = os.path.abspath(os.path.join(image_library_root, path))
+                if not full_path.startswith(TRASH_ROOT) or not os.path.exists(full_path):
+                    raise ValueError("File is not in trash or does not exist.")
+
+                # Delete metadata, thumbnail, preview, then the file itself
+                metadata_file_path = f"{full_path}.meta"
+                trashed_thumbnail_path = None
+                trashed_preview_path = None
+                if os.path.exists(metadata_file_path):
+                    with open(metadata_file_path, 'r') as f:
+                        metadata = json.load(f)
+                    trashed_thumbnail_path = metadata.get('trashed_thumbnail_path')
+                    trashed_preview_path = metadata.get('trashed_preview_path')
+                    if trashed_thumbnail_path:
+                        thumb_full_path = os.path.join(image_library_root, trashed_thumbnail_path)
+                        if os.path.exists(thumb_full_path): os.remove(thumb_full_path)
+                    if trashed_preview_path:
+                        preview_full_path = os.path.join(image_library_root, trashed_preview_path)
+                        if os.path.exists(preview_full_path): os.remove(preview_full_path)
+                    os.remove(metadata_file_path)
+                os.remove(full_path)
+
+            else:
+                # Logic for moving to trash
+                original_full_path = os.path.abspath(os.path.join(image_library_root, path))
+                if not original_full_path.startswith(image_library_root) or not os.path.exists(original_full_path):
+                    raise ValueError("File is not in media library or does not exist.")
+
+                # Reuse single-file trash logic
+                move_to_trash_logic(path)
+                parent_folders_to_update.add(os.path.dirname(original_full_path))
+
+            success_count += 1
+        except Exception as e:
+            print(f"Failed to process '{path}': {e}")
+            fail_count += 1
+
+    # Update counts for all affected folders
+    for folder in parent_folders_to_update:
+        _update_folder_item_count_meta(folder)
+
+    # Always update trash count as well
+    _update_folder_item_count_meta(TRASH_ROOT)
+
+    return jsonify({
+        "message": f"Operation complete. Succeeded: {success_count}, Failed: {fail_count}",
+        "success_count": success_count,
+        "fail_count": fail_count
+    })
+
+# NEW: Endpoint for restoring multiple files
+@app.route('/api/restore_multiple', methods=['POST'])
+def restore_multiple():
+    """Restores multiple files from the trash."""
+    data = request.get_json()
+    paths = data.get('paths', [])
+
+    if not paths:
+        return jsonify({"error": "No paths provided"}), 400
+
+    success_count = 0
+    fail_count = 0
+    parent_folders_to_update = set()
+
+    for path in paths:
+        try:
+            # Security check to ensure file is in trash
+            source_full_path = os.path.abspath(os.path.join(image_library_root, path))
+            if not source_full_path.startswith(TRASH_ROOT):
+                raise ValueError(f"File '{path}' is not in the trash folder.")
+
+            # The single-file restore logic is reused here
+            final_restore_path = restore_file_logic(path)
+            parent_folders_to_update.add(os.path.dirname(final_restore_path))
+            success_count += 1
+        except Exception as e:
+            print(f"ERROR: Failed to restore '{path}': {e}")
+            fail_count += 1
+
+    # Update folder counts in a batch
+    for folder in parent_folders_to_update:
+        _update_folder_item_count_meta(folder)
+    _update_folder_item_count_meta(TRASH_ROOT)
+
+    return jsonify({
+        "message": f"Operation complete. Restored: {success_count}, Failed: {fail_count}",
+        "success_count": success_count,
+        "fail_count": fail_count
+    })
+
+
+def move_to_trash_logic(file_relative_path):
+    """Refactored logic to move a single file to trash, to be reusable."""
+    original_full_path = os.path.abspath(os.path.join(image_library_root, file_relative_path))
+
+    filename = os.path.basename(original_full_path)
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    unique_id = os.urandom(4).hex()
+    name, ext = os.path.splitext(filename)
+    trash_filename = f"{name}_{timestamp}_{unique_id}{ext}"
+    trash_full_path = os.path.join(TRASH_ROOT, trash_filename)
+
+    # Create metadata first
+    metadata = {
+        'original_path': file_relative_path,
+        'trashed_at': datetime.now().isoformat(),
+        'trashed_as': trash_filename
+    }
+
+    # Handle thumbnail
+    original_thumbnail_full_path = _get_thumbnail_full_path(original_full_path)
+    if os.path.isfile(original_thumbnail_full_path):
+        thumb_name, thumb_ext = os.path.splitext(os.path.basename(original_thumbnail_full_path))
+        trashed_thumb_filename = f"{thumb_name}_{timestamp}_{unique_id}{thumb_ext}"
+        trashed_thumb_full_path = os.path.join(TRASH_ROOT, THUMBNAIL_SUBFOLDER_NAME, trashed_thumb_filename)
+        os.makedirs(os.path.dirname(trashed_thumb_full_path), exist_ok=True)
+        shutil.move(original_thumbnail_full_path, trashed_thumb_full_path)
+        metadata['trashed_thumbnail_path'] = os.path.relpath(trashed_thumb_full_path, image_library_root).replace('\\','/')
+
+
+    # Handle preview
+    original_preview_full_path = _get_preview_full_path(original_full_path)
+    if os.path.isfile(original_preview_full_path):
+        preview_name, preview_ext = os.path.splitext(os.path.basename(original_preview_full_path))
+        trashed_preview_filename = f"{preview_name}_{timestamp}_{unique_id}{preview_ext}"
+        trashed_preview_full_path = os.path.join(TRASH_ROOT, PREVIEW_SUBFOLDER_NAME, trashed_preview_filename)
+        os.makedirs(os.path.dirname(trashed_preview_full_path), exist_ok=True)
+        shutil.move(original_preview_full_path, trashed_preview_full_path)
+        metadata['trashed_preview_path'] = os.path.relpath(trashed_preview_full_path, image_library_root).replace('\\','/')
+
+    # Move main file and write metadata
+    shutil.move(original_full_path, trash_full_path)
+    metadata_file_path = f"{trash_full_path}.meta"
+    with open(metadata_file_path, 'w') as f:
+        json.dump(metadata, f, indent=4)
+
+
 def restore_file_logic(file_relative_path_in_trash):
-    """Logic to restore a single file, refactored to be reusable."""
+    """
+    Logic to restore a single file, refactored to be reusable.
+    This function does NOT update folder counts. The caller is responsible.
+    Returns the final path of the restored file.
+    """
     source_full_path_in_trash = os.path.abspath(os.path.join(image_library_root, file_relative_path_in_trash))
+    if not source_full_path_in_trash.startswith(TRASH_ROOT):
+        raise ValueError("Forbidden: Attempted to restore file outside of trash folder.")
+
     if not os.path.exists(source_full_path_in_trash):
         raise FileNotFoundError(f"File not found in trash: {source_full_path_in_trash}")
 
     metadata_file_path = f"{source_full_path_in_trash}.meta"
     if not os.path.exists(metadata_file_path):
-        raise FileNotFoundError(f"Metadata for file not found: {metadata_file_path}")
+        # Fallback for items trashed before metadata existed
+        raise FileNotFoundError(f"Metadata for file not found: {metadata_file_path}. Cannot restore.")
 
     with open(metadata_file_path, 'r') as f:
         metadata = json.load(f)
@@ -1021,13 +1156,20 @@ def restore_file_logic(file_relative_path_in_trash):
         new_filename = f"{os.path.basename(base_name)}{timestamp}{ext}"
         final_restore_path = os.path.abspath(os.path.join(image_library_root, dir_name, new_filename))
 
+    # Restore associated files first
     _restore_associated_file(final_restore_path, trashed_thumbnail_path, _get_thumbnail_full_path)
     _restore_associated_file(final_restore_path, trashed_preview_path, _get_preview_full_path)
+
+    # Move the main file
     shutil.move(source_full_path_in_trash, final_restore_path)
     os.remove(metadata_file_path)
-    _update_folder_item_count_meta(os.path.dirname(final_restore_path))
+
+    # Return the path it was restored to, so the caller can update counts
+    return final_restore_path
 
 
 if __name__ == '__main__':
     _initial_scan_and_populate_counts() # Run initial scan on startup
-    app.run(host='0.0.0.0', debug=True, port=PORT)
+    # To run without SSL for local dev, comment out the ssl_context line
+    # app.run(host='0.0.0.0', debug=True, port=PORT)
+    app.run(host='0.0.0.0', debug=True, port=PORT, ssl_context=('cert.pem', 'key.pem'))
