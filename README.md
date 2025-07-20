@@ -86,6 +86,9 @@ pillow-heif
 pip3 install -r requirements.txt
 ```
 
+If you have trouble installing opencv-python, you can just disable the ``import cv2`` line in the beginning of ``server.py`` (it is only needed for video thumbnails)
+
+
 **Configure `server.py`:**
 
 ```python
