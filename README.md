@@ -8,7 +8,7 @@ A self-hosted, web-based gallery application for browsing and managing a persona
 
 ## 🔑 Key Features
 
-- **Folder-Based Browsing**: Navigate your media library through a familiar folder structure (e.g., `Year > Month > Day`).
+- **Folder-Based Browsing**: Navigate your media library through a familiar folder structure (e.g., `Year > Month > Day`). Upload files with drag-n-drop or using upload button into any folder.
 - **Wide Format Support**: Handles common image (`.jpg`, `.png`, `.webp`), video (`.mp4`, `.mov`), and various camera RAW formats (`.nef`, `.cr2`, `.dng`, etc.).
 - **HEIC Support**: Automatically converts Apple's `.heic` format for web viewing on the fly.
 - **Automatic Thumbnail Generation**: Fast-loading `.webp` thumbnails are created automatically for all media types.
@@ -144,7 +144,9 @@ Once running, open your browser and visit:
 ```
 http://localhost:8080
 ```
+
 (there is also an option to serve via https://)
+
 ---
 
 ## 🧪 API Endpoints
