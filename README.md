@@ -7,6 +7,7 @@ A self-hosted, web-based gallery application for browsing and managing a persona
 
 Demo: http://143.47.246.212:8080 
 
+![Screenshot](gallery.jpeg)
 ---
 
 ## 🔑 Key Features
