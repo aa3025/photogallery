@@ -168,3 +168,7 @@ http://localhost:8080
 | `POST`   | `/api/empty_trash`            | Permanently deletes all items in the trash       |
 | `POST`   | `/api/restore_all`            | Restores all items from the trash                |
 
+
+---
+
+Created with the help of Google Gemini 2.5 Flash (it was a struggle :)
