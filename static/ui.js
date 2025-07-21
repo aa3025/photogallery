@@ -43,8 +43,7 @@ export function updateActionButtonsVisibility() {
     }
 
     dom.uploadFilesBtn.classList.toggle('hidden', isViewingTrash);
-    dom.emptyTrashBtn.classList.toggle('hidden', !isViewingTrash);
-    dom.restoreAllBtn.classList.toggle('hidden', !isViewingTrash);
+    // REMOVED emptyTrashBtn and restoreAllBtn logic
 }
 
 // --- Breadcrumb ---
@@ -172,9 +171,6 @@ export function displayMediaThumbnails(mediaFiles, onSelectionChange) {
     dom.galleryContainer.innerHTML = '';
     lazyLoadObserver.disconnect();
     
-    // Show or hide the multi-select action bar
-    //dom.multiSelectActionBar.classList.toggle('hidden', mediaFiles.length === 0);
-
     if (mediaFiles.length > 0) {
         dom.gallerySection.classList.remove('hidden');
         mediaFiles.forEach((mediaItem, index) => {

@@ -15,7 +15,7 @@
         h1 {
             font-family: 'Corinthia', cursive; /* Corrected to Corinthia */
             font-weight: 500; /* Corrected font weight */
-            font-size: 4rem !important; /* Corrected font size */
+            font-size: 5rem !important; /* Corrected font size */
             transition: color 0.3s ease;
         }
 
@@ -494,10 +494,16 @@
         }
 
         /* Icon sizing for delete/restore */
-        .trash-delete-btn-style .material-icons,
-        .trash-restore-btn-style .material-icons {
+        .trash-delete-btn-style .material-icons {
             font-size: 1.5rem; /* Adjusted to match Material Icons visual size */
         }
+
+        /* NEW: Style for the recycle icon */
+        .recycle-icon {
+            font-size: 1.8rem;
+            line-height: 1;
+        }
+
         /* Material Icons for Play/Pause buttons */
         .slideshow-btn-style .material-icons {
             font-size: 2.5rem; /* Larger font size for play/pause icons */
@@ -1167,7 +1173,9 @@
             opacity: 0; /* Hidden by default */
             transition: opacity 0.2s ease;
             cursor: pointer;
-            background-color: #333333;
+            background-color: #cccccc;
+            border-radius: 5px;
+            /* appearance: none; */
         }
 
 
@@ -1175,15 +1183,15 @@
 
         .gallery-item:hover .thumbnail-checkbox,
         .gallery-item.selected .thumbnail-checkbox {
-            opacity: 1; /* Show on hover or when selected */
+            opacity: 0.8; /* Show on hover or when selected */
         }
         body[data-theme='light'] .gallery-item.selected img {
             border: 3px solid #333333; /* Indigo border for selected items */
-            box-shadow: 0 0 15px rgba(79, 70, 229, 0.5);
+            box-shadow: 0 0 25px rgba(79, 70, 229, 0.8);
         }
         body[data-theme='dark'] .gallery-item.selected img {
             border: 3px solid #cccccc; /* Indigo border for selected items */
-            box-shadow: 0 0 15px rgba(79, 70, 229, 0.5);
+            box-shadow: 0 0 25px rgba(79, 70, 229, 0.8);
         }
 
         .thumbnail-checkbox:checked {
@@ -1206,4 +1214,74 @@
             justify-content: center;
             align-items: center;
             border: 2px solid #2d3748; /* Match container background */
+        }
+
+        /* --- NEW: Login Modal Styles --- */
+        .login-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .login-modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .login-modal-content {
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+        }
+        body[data-theme='dark'] .login-modal-content {
+            background-color: #2d3748;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+            color: #e2e8f0;
+        }
+        body[data-theme='light'] .login-modal-content {
+            background-color: #ffffff;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            color: #2d3748;
+        }
+        .login-modal-content h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .login-modal-content input {
+            width: calc(100% - 2rem);
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        body[data-theme='dark'] .login-modal-content input {
+            background-color: #4a5568;
+            border-color: #6a768f;
+            color: #e2e8f0;
+        }
+        .login-modal-content .modal-buttons button {
+            width: 100%;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .login-error-message {
+            color: #ef4444; /* Red for errors */
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
         }

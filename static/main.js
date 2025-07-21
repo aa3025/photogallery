@@ -9,6 +9,55 @@ import * as lightbox from './lightbox.js';
 import * as modals from './modals.js';
 import * as config from './config.js';
 
+// --- Authentication Logic ---
+
+function showLoginModal(errorMessage = '') {
+    dom.loginErrorMessage.textContent = errorMessage;
+    dom.loginErrorMessage.classList.toggle('hidden', !errorMessage);
+    dom.loginModalOverlay.classList.add('active');
+    dom.usernameInput.focus();
+}
+
+function hideLoginModal() {
+    dom.loginModalOverlay.classList.remove('active');
+    dom.usernameInput.value = '';
+    dom.passwordInput.value = '';
+    dom.loginErrorMessage.classList.add('hidden');
+}
+
+async function handleLogin() {
+    const username = dom.usernameInput.value.trim();
+    const password = dom.passwordInput.value.trim();
+
+    if (!username || !password) {
+        showLoginModal('Username and password are required.');
+        return;
+    }
+
+    api.setCredentials(username, password);
+
+    try {
+        // Try a simple API call to verify credentials
+        await api.getFolders(); 
+        hideLoginModal();
+        navigateToPath([]); // Load the gallery content
+    } catch (error) {
+        if (error.message === 'Unauthorized') {
+            showLoginModal('Invalid username or password.');
+        } else {
+            showLoginModal('An error occurred. Please try again.');
+        }
+        api.clearCredentials(); // Clear bad credentials
+    }
+}
+
+function handleLogout() {
+    api.clearCredentials();
+    // Reload the page to force login
+    window.location.reload();
+}
+
+
 // --- Multi-Select Logic ---
 
 function handleSelectionChange() {
@@ -31,9 +80,9 @@ function handleSelectionChange() {
     dom.selectedPermanentDeleteCount.textContent = count;
     dom.deleteSelectedPermanentBtn.classList.toggle('hidden', count === 0 || !isViewingTrash);
 
-    // Hide the 'Select All' button when in the trash view
+    // MODIFIED: Show 'Select All' button whenever there are items, including in trash
     const allCheckboxes = dom.galleryContainer.querySelectorAll('.thumbnail-checkbox');
-    dom.selectAllBtn.classList.toggle('hidden', allCheckboxes.length === 0 || isViewingTrash);
+    dom.selectAllBtn.classList.toggle('hidden', allCheckboxes.length === 0);
 }
 
 
@@ -67,7 +116,13 @@ async function navigateToPath(pathSegments) {
         }
     } catch (error) {
         console.error('Navigation error:', error);
-        ui.showMessage(`Error loading content: ${error.message}`, 'error');
+        if (error.message === 'Unauthorized') {
+            // If session expires or credentials become invalid, force re-login
+            api.clearCredentials();
+            showLoginModal('Your session has expired. Please login again.');
+        } else {
+            ui.showMessage(`Error loading content: ${error.message}`, 'error');
+        }
     }
 }
 
@@ -152,19 +207,19 @@ async function toggleSlideshow() {
 
 
 // --- Initial Setup ---
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     initDOMElements();
     lightbox.initializeLightbox();
     modals.initializeModals(navigateToPath);
 
     const savedTheme = localStorage.getItem('theme') || 'dark';
     ui.setTheme(savedTheme);
+
+    // --- Event Listeners ---
     dom.themeToggleButton.addEventListener('click', () => {
         const newTheme = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         ui.setTheme(newTheme);
     });
-
-    navigateToPath([]);
 
     dom.homeBtnTopRight.addEventListener('click', () => navigateToPath([]));
     dom.slideshowBtnBreadcrumb.addEventListener('click', toggleSlideshow);
@@ -213,8 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    dom.emptyTrashBtn.addEventListener('click', () => modals.showConfirmationModal('empty_trash'));
-    dom.restoreAllBtn.addEventListener('click', () => modals.showConfirmationModal('restore_all'));
+    // REMOVED event listeners for emptyTrashBtn and restoreAllBtn
 
     dom.selectAllBtn.addEventListener('click', () => {
         const allCheckboxes = dom.galleryContainer.querySelectorAll('.thumbnail-checkbox');
@@ -233,16 +287,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     dom.restoreSelectedBtn.addEventListener('click', () => {
-        // We reuse the confirmation modal: (actionTarget, isPermanentDelete, isRestore)
         modals.showConfirmationModal(state.selectedFiles, false, true);
     });
 
-    // NEW EVENT LISTENER FOR 'Delete Selected Permanently' BUTTON
     dom.deleteSelectedPermanentBtn.addEventListener('click', () => {
-        // The modal handler already supports this: (actionTarget, isPermanentDelete, isRestore)
         modals.showConfirmationModal(state.selectedFiles, true, false);
     });
-
 
     dom.galleryContainer.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -270,4 +320,26 @@ document.addEventListener('DOMContentLoaded', () => {
             modals.updateUploadList();
         }
     });
+
+    // --- Login and Logout Listeners ---
+    dom.loginBtn.addEventListener('click', handleLogin);
+    dom.passwordInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleLogin();
+    });
+    dom.logoutBtn.addEventListener('click', handleLogout);
+
+    // --- Initial Authentication Check ---
+    if (api.hasCredentials()) {
+        try {
+            await navigateToPath([]); // Try to load content with stored credentials
+        } catch (error) {
+            // This catch is for initial load. navigateToPath has its own more specific catch.
+            if (error.message === 'Unauthorized') {
+                api.clearCredentials();
+                showLoginModal('Your session has expired. Please login again.');
+            }
+        }
+    } else {
+        showLoginModal();
+    }
 });

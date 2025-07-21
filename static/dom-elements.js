@@ -19,11 +19,10 @@ export function initDOMElements() {
     dom.trashDeleteBtn = document.getElementById('trashDeleteBtn');
     dom.trashRestoreBtn = document.getElementById('trashRestoreBtn');
     dom.downloadRawBtn = document.getElementById('downloadRawBtn');
-    dom.emptyTrashBtn = document.getElementById('emptyTrashBtn');
-    dom.restoreAllBtn = document.getElementById('restoreAllBtn');
     dom.homeBtnTopRight = document.getElementById('homeBtnTopRight');
     dom.themeToggleButton = document.getElementById('themeToggleButton');
     dom.uploadFilesBtn = document.getElementById('uploadFilesBtn');
+    dom.logoutBtn = document.getElementById('logoutBtn');
 
     // --- Multi-Select Action Buttons ---
     dom.selectAllBtn = document.getElementById('selectAllBtn');
@@ -31,7 +30,6 @@ export function initDOMElements() {
     dom.selectedCount = document.getElementById('selectedCount');
     dom.restoreSelectedBtn = document.getElementById('restoreSelectedBtn');
     dom.selectedRestoreCount = document.getElementById('selectedRestoreCount');
-    // NEW "Delete Selected Permanently" BUTTON ELEMENTS ADDED HERE
     dom.deleteSelectedPermanentBtn = document.getElementById('deleteSelectedPermanentBtn');
     dom.selectedPermanentDeleteCount = document.getElementById('selectedPermanentDeleteCount');
 
@@ -67,6 +65,13 @@ export function initDOMElements() {
     dom.startUploadBtn = document.getElementById('startUploadBtn');
     dom.cancelUploadBtn = document.getElementById('cancelUploadBtn');
     dom.uploadTargetFolderInfo = document.getElementById('uploadTargetFolderInfo');
+
+    // --- Login Modal Elements ---
+    dom.loginModalOverlay = document.getElementById('loginModalOverlay');
+    dom.usernameInput = document.getElementById('usernameInput');
+    dom.passwordInput = document.getElementById('passwordInput');
+    dom.loginBtn = document.getElementById('loginBtn');
+    dom.loginErrorMessage = document.getElementById('loginErrorMessage');
 
     // --- Message Box ---
     dom.messageBox = document.getElementById('messageBox');

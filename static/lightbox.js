@@ -50,7 +50,12 @@ export function updateLightboxMedia() {
         existingMedia.classList.remove('zoomed');
     }
 
-    if (state.slideshowInterval) clearInterval(state.slideshowInterval);
+    // Clear any pending slideshow timer before loading the new media.
+    // A new timer will be set in the onload handler if the slideshow is still active.
+    if (state.slideshowInterval) {
+        clearTimeout(state.slideshowInterval);
+        state.setSlideshowInterval(null);
+    }
 
     const mediaItem = state.currentDisplayedMedia[state.currentMediaIndex];
     if (!mediaItem) {
@@ -87,6 +92,7 @@ export function updateLightboxMedia() {
 
     newMediaElement.onload = newMediaElement.onloadeddata = () => {
         newMediaElement.classList.add('fade-in');
+        // If the slideshow is running, set a timer for the *next* slide.
         if (state.isSlideshowRunning) {
             if (isVideo) {
                 newMediaElement.play();
@@ -110,12 +116,14 @@ export function updateLightboxMedia() {
 }
 
 export function showNextMedia() {
+    // This function is now used for both automatic and manual "next" actions.
     const newIndex = (state.currentMediaIndex + 1) % state.currentDisplayedMedia.length;
     state.setCurrentMediaIndex(newIndex);
     updateLightboxMedia();
 }
 
 export function showPreviousMedia() {
+    // This function is now used for manual "previous" actions.
     const newIndex = (state.currentMediaIndex - 1 + state.currentDisplayedMedia.length) % state.currentDisplayedMedia.length;
     state.setCurrentMediaIndex(newIndex);
     updateLightboxMedia();
@@ -128,9 +136,11 @@ export function updateSlideshowControls() {
     dom.slideshowBtnLightbox.querySelector('.play_icon').classList.toggle('hidden', isRunning);
     dom.slideshowBtnLightbox.querySelector('.pause_icon').classList.toggle('hidden', !isRunning);
     
+    // MODIFIED: Removed logic that disabled navigation buttons during slideshow.
+    // This allows the user to manually navigate while the slideshow is active.
     if (dom.lightboxOverlay.classList.contains('active')) {
-        dom.lightboxPrev.style.pointerEvents = isRunning ? 'none' : 'auto';
-        dom.lightboxNext.style.pointerEvents = isRunning ? 'none' : 'auto';
+        dom.lightboxPrev.style.pointerEvents = 'auto';
+        dom.lightboxNext.style.pointerEvents = 'auto';
     }
 }
 
@@ -179,7 +189,7 @@ function handlePanEnd() {
     window.removeEventListener('mouseup', handlePanEnd);
 }
 
-// --- NEW: Initialization Function ---
+// --- Initialization Function ---
 export function initializeLightbox() {
     dom.lightboxMediaDisplay.addEventListener('wheel', (e) => {
         const mediaElement = dom.lightboxMediaDisplay.querySelector('.media-display:not(video)');

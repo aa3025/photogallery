@@ -1,7 +1,7 @@
-######## YOUR SETUP #############
+# ######## YOUR SETUP #############
 
 PORT=8080 # Flask server port number
-GALLERY='/absolute/path/to/my/gallery' # all the gallery files are here
+GALLERY='/Volumes/aa3025_bkp/Photos_Backup' # all the gallery files are here
 
 #################################
 
@@ -10,45 +10,49 @@ import os
 import json
 import shutil
 from datetime import datetime
-from flask import Flask, request, jsonify, send_from_directory, Response # Import Response for direct image serving
+from flask import Flask, request, jsonify, send_from_directory, Response
+from flask_httpauth import HTTPBasicAuth # ADDED: Import for authentication
 from werkzeug.utils import secure_filename
-from PIL import Image, ExifTags, __version__ as pillow_version # Import Pillow for image processing, and get its version
-import rawpy # For RAW image processing
-import cv2 # MODIFIED: Added OpenCV for video processing
-import numpy as np # For rawpy output and OpenCV frame handling
+from PIL import Image, ExifTags, __version__ as pillow_version
+import rawpy
+import cv2
+import numpy as np
 try:
-    # While pillow_heif handles HEIC via Image.open(), imageio.v3 might be useful for other video/image formats
-    # or if pillow_heif encounters issues. Keeping it as an optional import.
     import imageio.v3 as iio
 except ImportError as e:
     print(f"Warning: 'imageio.v3' could not be imported ({e}). HEIC/other processing might be limited if pillow_heif fails.")
-    iio = None # Set iio to None if import fails
-import io # For in-memory image handling
-from pillow_heif import register_heif_opener # Import register_heif_opener for HEIC support
+    iio = None
+import io
+from pillow_heif import register_heif_opener
 
-# Register the HEIF opener for Pillow. This allows Pillow's Image.open() to handle HEIC files.
 register_heif_opener()
 
 
 app = Flask(__name__)
+auth = HTTPBasicAuth() # ADDED: Initialize the authentication handler
+
+# --- User Authentication ---
+# ADDED: Credentials for the server
+users = {
+    "aa3025": "ghjnjcc"
+}
+
+@auth.verify_password
+def verify_password(username, password):
+    """Verifies the username and password."""
+    if username in users and users[username] == password:
+        return username
+# --- End of Authentication ---
 
 # --- Configuration ---
-# IMPORTANT: Set this to the ABSOLUTE path of your main photo library folder.
-# Example: If your photos are in '/Users/YourUser/Pictures/MyGallery', set BASE_DIR to that.
-image_library_root = os.path.abspath(GALLERY) # User should update this!
+image_library_root = os.path.abspath(GALLERY)
+TRASH_FOLDER_NAME = '_Trash'
+TRASH_ROOT = os.path.join(image_library_root, TRASH_FOLDER_NAME)
+COUNT_META_FILENAME = '_count.meta'
+THUMBNAIL_SUBFOLDER_NAME = '.thumbnails'
+PREVIEW_SUBFOLDER_NAME = '.previews'
+THUMBNAIL_MAX_DIMENSION = 480
 
-TRASH_FOLDER_NAME = '_Trash' # Must match frontend
-TRASH_ROOT = os.path.join(image_library_root, TRASH_FOLDER_NAME) # Absolute path to trash
-
-COUNT_META_FILENAME = '_count.meta' # Stores item counts for folders
-
-# Thumbnail and Preview configuration
-THUMBNAIL_SUBFOLDER_NAME = '.thumbnails' # Hidden directory for thumbnails within media folders
-PREVIEW_SUBFOLDER_NAME = '.previews' # Hidden directory for full-size previews within media folders
-THUMBNAIL_MAX_DIMENSION = 480 # Max width or height for thumbnails
-# PREVIEW_MAX_DIMENSION = 1920 # Removed as per previous request to serve full-size previews, but good to keep in mind for future scaling
-
-# Determine the resampling filter based on Pillow version
 try:
     if tuple(map(int, pillow_version.split('.'))) >= (9, 1, 0):
         RESAMPLING_FILTER = Image.Resampling.LANCZOS
@@ -60,8 +64,6 @@ except Exception as e:
     RESAMPLING_FILTER = Image.LANCZOS
     print(f"Warning: Error determining resampling filter ({e}), falling back to Image.LANCZOS.")
 
-
-# Allowed extensions for upload and processing - CORRECTED TO INCLUDE LEADING DOTS
 ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.avif'}
 ALLOWED_RAW_EXTENSIONS = {'.nef', '.nrw', '.cr2', '.cr3', '.crw', '.arw', '.srf', '.sr2',
                           '.orf', '.raf', '.rw2', '.raw', '.dng', '.kdc', '.dcr', '.erf',
@@ -69,13 +71,12 @@ ALLOWED_RAW_EXTENSIONS = {'.nef', '.nrw', '.cr2', '.cr3', '.crw', '.arw', '.srf'
 ALLOWED_VIDEO_EXTENSIONS = {'.mp4', '.mov', '.webm', '.ogg', '.avi', '.mkv'}
 ALL_MEDIA_EXTENSIONS = ALLOWED_IMAGE_EXTENSIONS.union(ALLOWED_RAW_EXTENSIONS).union(ALLOWED_VIDEO_EXTENSIONS)
 
-# Ensure directories exist
 os.makedirs(image_library_root, exist_ok=True)
 os.makedirs(TRASH_ROOT, exist_ok=True)
 
 
 # --- Helper Functions (from gallery-server, adapted) ---
-
+# NOTE: All helper functions remain unchanged.
 def allowed_file(filename):
     """Checks if a file has an allowed extension."""
     return '.' in filename and \
@@ -389,12 +390,12 @@ def _get_media_files_in_directory(path, include_subfolders=False):
 
 @app.route('/')
 def index():
-    """Serves the main HTML page."""
+    """Serves the main HTML page. This is NOT password protected."""
     return send_from_directory('static', 'index.html')
 
-# MODIFIED: Unified endpoint for Browse folders
 @app.route('/api/folders', defaults={'path': ''})
 @app.route('/api/folders/<path:path>')
+@auth.login_required # MODIFIED: Add authentication decorator
 def get_folders(path):
     """Returns a list of subfolders and files for a given path."""
 
@@ -414,7 +415,6 @@ def get_folders(path):
                 count = _read_folder_item_count(full_path) or 0
             folders_data.append({"name": item, "count": count})
 
-    # Custom sorting for months
     month_map = {name: i for i, name in enumerate(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])}
     folders_data.sort(key=lambda x: month_map.get(x['name'], x['name']))
 
@@ -422,6 +422,7 @@ def get_folders(path):
 
 
 @app.route('/api/media/<path:relative_path>')
+@auth.login_required # MODIFIED: Add authentication decorator
 def get_media(relative_path):
     """Serves media files (images, videos, converted RAW/HEIC for display)."""
     full_path = os.path.abspath(os.path.join(image_library_root, relative_path))
@@ -433,7 +434,7 @@ def get_media(relative_path):
         return jsonify({"error": "Media not found"}), 404
 
     filename = os.path.basename(full_path)
-    ext = os.path.splitext(filename)[1].lower() # Get extension with leading dot
+    ext = os.path.splitext(filename)[1].lower()
 
     if ext in ALLOWED_RAW_EXTENSIONS or ext == '.heic':
         try:
@@ -446,11 +447,12 @@ def get_media(relative_path):
         except Exception as e:
             print(f"ERROR: get_media - Error processing file {full_path}: {type(e).__name__}: {e}")
             return jsonify({"error": "Failed to process file for display"}), 500
-    else: # Serve original image/video directly
+    else:
         directory = os.path.dirname(full_path)
         return send_from_directory(directory, filename)
 
 @app.route('/api/thumbnail/<path:relative_path>')
+@auth.login_required # MODIFIED: Add authentication decorator
 def get_thumbnail(relative_path):
     """Serves thumbnails for images and RAW files."""
     full_media_path = os.path.abspath(os.path.join(image_library_root, relative_path))
@@ -461,7 +463,7 @@ def get_thumbnail(relative_path):
     if not os.path.exists(full_media_path):
         return jsonify({"error": "Media file for thumbnail not found"}), 404
 
-    thumbnail_full_path = _generate_thumbnail(full_media_path) # Generate or get existing
+    thumbnail_full_path = _generate_thumbnail(full_media_path)
 
     if thumbnail_full_path and os.path.exists(thumbnail_full_path):
         return send_from_directory(os.path.dirname(thumbnail_full_path), os.path.basename(thumbnail_full_path))
@@ -469,9 +471,9 @@ def get_thumbnail(relative_path):
         print(f"ERROR: get_thumbnail - Thumbnail generation failed or unsupported type for {full_media_path}")
         return jsonify({"error": "Thumbnail generation failed or unsupported type"}), 500
 
-# MODIFIED: Added a default path to handle root slideshow
 @app.route('/api/recursive_media', defaults={'path_segments': ''})
 @app.route('/api/recursive_media/<path:path_segments>')
+@auth.login_required # MODIFIED: Add authentication decorator
 def get_recursive_media(path_segments):
     """Returns all media files recursively from a given path."""
     full_path_segments = path_segments.split('/') if path_segments else []
@@ -487,6 +489,7 @@ def get_recursive_media(path_segments):
     return jsonify(media_files)
 
 @app.route('/api/download_original_raw/<path:relative_path>')
+@auth.login_required # MODIFIED: Add authentication decorator
 def download_original_raw(relative_path):
     """Allows downloading of original RAW/HEIC files."""
     full_path = os.path.abspath(os.path.join(image_library_root, relative_path))
@@ -500,7 +503,6 @@ def download_original_raw(relative_path):
     filename = os.path.basename(full_path)
     ext = os.path.splitext(filename)[1].lower()
 
-    # Allow download for RAW and HEIC
     if ext in ALLOWED_RAW_EXTENSIONS or ext == '.heic':
         directory = os.path.dirname(full_path)
         return send_from_directory(directory, filename, as_attachment=True)
@@ -508,12 +510,12 @@ def download_original_raw(relative_path):
         return jsonify({"error": "File is not a RAW/HEIC format or not allowed for direct download"}), 400
 
 @app.route('/api/trash_content')
+@auth.login_required # MODIFIED: Add authentication decorator
 def get_trash_content():
     """
     Returns a list of all files in the trash directory, including subfolders.
     """
     trash_files = []
-    # MODIFIED: Added dirs[:] to prevent walking into hidden subdirectories
     for root, dirs, files in os.walk(TRASH_ROOT):
         dirs[:] = [d for d in dirs if not d.startswith('.')]
         for file in files:
@@ -525,9 +527,8 @@ def get_trash_content():
                     'filename': file,
                     'relative_path_in_trash': os.path.join(TRASH_FOLDER_NAME, relative_path_in_trash).replace('\\', '/'),
                     'type': get_media_type(file),
-                    'thumbnail_path': os.path.join(TRASH_FOLDER_NAME, relative_path_in_trash).replace('\\', '/') # Thumbnail is the file itself in trash
+                    'thumbnail_path': os.path.join(TRASH_FOLDER_NAME, relative_path_in_trash).replace('\\', '/')
                 }
-                # Get original path from metadata
                 metadata_file = full_file_path + '.meta'
                 if os.path.exists(metadata_file):
                     try:
@@ -542,17 +543,17 @@ def get_trash_content():
 
                 trash_files.append(info)
 
-    # Sort by filename
     trash_files.sort(key=lambda x: x['filename'].lower())
 
     count = _read_folder_item_count(TRASH_ROOT)
-    if count is None: # Fallback if read fails
+    if count is None:
         count = len(trash_files)
 
     return jsonify({'files': trash_files, 'count': count})
 
 
 @app.route('/api/move_to_trash', methods=['POST'])
+@auth.login_required # MODIFIED: Add authentication decorator
 def move_to_trash():
     """Moves a single file to the trash folder and records its original path."""
     data = request.get_json()
@@ -563,7 +564,7 @@ def move_to_trash():
 
     original_full_path = os.path.abspath(os.path.join(image_library_root, file_relative_path))
     if not original_full_path.startswith(image_library_root) or TRASH_ROOT in original_full_path:
-        return jsonify({"error": "Forbidden: Attempted to move file from outside media root or from trash."}), 403 # Forbidden
+        return jsonify({"error": "Forbidden: Attempted to move file from outside media root or from trash."}), 403
 
     if not os.path.exists(original_full_path):
         return jsonify({"error": "File not found"}), 404
@@ -576,7 +577,6 @@ def move_to_trash():
     trash_full_path = os.path.join(TRASH_ROOT, trash_filename)
 
     try:
-        # MODIFICATION: Create hidden subdirectories in trash
         trash_thumbnail_dir = os.path.join(TRASH_ROOT, THUMBNAIL_SUBFOLDER_NAME)
         trash_preview_dir = os.path.join(TRASH_ROOT, PREVIEW_SUBFOLDER_NAME)
         os.makedirs(trash_thumbnail_dir, exist_ok=True)
@@ -584,29 +584,24 @@ def move_to_trash():
 
         shutil.move(original_full_path, trash_full_path)
 
-        # Move associated thumbnail if it exists
         original_thumbnail_full_path = _get_thumbnail_full_path(original_full_path)
         trashed_thumbnail_relative_path = None
         if os.path.isfile(original_thumbnail_full_path):
             thumb_name, thumb_ext = os.path.splitext(os.path.basename(original_thumbnail_full_path))
-            trashed_thumb_filename = f"{thumb_name}_{timestamp}_{unique_id}{thumb_ext}" # Use same timestamp/unique_id
-            # MODIFICATION: Move to hidden thumbnail folder in trash
+            trashed_thumb_filename = f"{thumb_name}_{timestamp}_{unique_id}{thumb_ext}"
             trashed_thumb_full_path = os.path.join(trash_thumbnail_dir, trashed_thumb_filename)
             shutil.move(original_thumbnail_full_path, trashed_thumb_full_path)
             trashed_thumbnail_relative_path = os.path.relpath(trashed_thumb_full_path, image_library_root).replace('\\', '/')
-
-            # Clean up empty thumbnail directory
+            
             thumb_dir = os.path.dirname(original_thumbnail_full_path)
             if os.path.exists(thumb_dir) and not os.listdir(thumb_dir):
                 os.rmdir(thumb_dir)
 
-        # Handle preview: if it exists, move it to trash too
         original_preview_full_path = _get_preview_full_path(original_full_path)
         trashed_preview_relative_path = None
         if os.path.isfile(original_preview_full_path):
             preview_base_name, preview_ext = os.path.splitext(os.path.basename(original_preview_full_path))
             trashed_preview_filename = f"{preview_base_name}_{timestamp}_{unique_id}{preview_ext}"
-            # MODIFICATION: Move to hidden preview folder in trash
             trashed_preview_full_path = os.path.join(trash_preview_dir, trashed_preview_filename)
             shutil.move(original_preview_full_path, trashed_preview_full_path)
             trashed_preview_relative_path = os.path.relpath(trashed_preview_full_path, image_library_root).replace('\\', '/')
@@ -615,12 +610,10 @@ def move_to_trash():
             if os.path.exists(preview_dir) and not os.listdir(preview_dir):
                 os.rmdir(preview_dir)
 
-
-        # Create metadata file for the trashed item
         metadata = {
             'original_path': file_relative_path,
             'trashed_at': datetime.now().isoformat(),
-            'trashed_as': trash_filename # Store the name it was trashed as
+            'trashed_as': trash_filename
         }
         if trashed_thumbnail_relative_path:
             metadata['trashed_thumbnail_path'] = trashed_thumbnail_relative_path
@@ -631,7 +624,6 @@ def move_to_trash():
         with open(metadata_file_path, 'w') as f:
             json.dump(metadata, f, indent=4)
 
-        # Update counts
         _update_folder_item_count_meta(os.path.dirname(original_full_path))
         _update_folder_item_count_meta(TRASH_ROOT)
 
@@ -641,6 +633,7 @@ def move_to_trash():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/delete_file_forever', methods=['DELETE'])
+@auth.login_required # MODIFIED: Add authentication decorator
 def delete_file_forever():
     """Permanently deletes a file from TRASH_ROOT, along with its metadata, thumbnail, and preview."""
     data = request.get_json()
@@ -649,18 +642,15 @@ def delete_file_forever():
     if not file_relative_path_in_trash:
         return jsonify({"error": "Path not provided"}), 400
 
-    # Construct the full absolute path of the main file in trash
     full_path_in_trash = os.path.abspath(os.path.join(image_library_root, file_relative_path_in_trash))
 
-    # Security check: Ensure the file is actually within the TRASH_ROOT
     if not full_path_in_trash.startswith(TRASH_ROOT):
-        return jsonify({"error": "Forbidden: Attempted to delete file outside of trash folder."}), 403 # Forbidden
+        return jsonify({"error": "Forbidden: Attempted to delete file outside of trash folder."}), 403
 
     if not os.path.exists(full_path_in_trash):
         return jsonify({"error": "File not found in trash"}), 404
 
     try:
-        # Read metadata to find associated thumbnail and preview path in trash
         metadata_file_path = f"{full_path_in_trash}.meta"
         trashed_thumbnail_path = None
         trashed_preview_path = None
@@ -673,20 +663,16 @@ def delete_file_forever():
             except Exception as e:
                 print(f"Warning: Could not read metadata for {full_path_in_trash} to find associated files: {e}")
 
-        # Delete the main media file
         os.remove(full_path_in_trash)
 
-        # Delete the metadata file
         if os.path.exists(metadata_file_path):
             os.remove(metadata_file_path)
 
-        # Delete the associated thumbnail if it exists and is in trash
         if trashed_thumbnail_path:
             full_trashed_thumbnail_path = os.path.abspath(os.path.join(image_library_root, trashed_thumbnail_path))
             if os.path.exists(full_trashed_thumbnail_path) and full_trashed_thumbnail_path.startswith(TRASH_ROOT):
                 os.remove(full_trashed_thumbnail_path)
 
-        # Delete the associated preview if it exists and is in trash
         if trashed_preview_path:
             full_trashed_preview_path = os.path.abspath(os.path.join(image_library_root, trashed_preview_path))
             if os.path.exists(full_trashed_preview_path) and full_trashed_preview_path.startswith(TRASH_ROOT):
@@ -699,13 +685,9 @@ def delete_file_forever():
         print(f"ERROR: Error permanently deleting file: {type(e).__name__}: {e}")
         return jsonify({"error": str(e)}), 500
 
-# NEW: Helper function to restore associated files like thumbnails and previews
 def _restore_associated_file(final_restore_path, trashed_associated_path, path_generator_func):
     """
     Helper to restore an associated file (thumbnail or preview).
-    :param final_restore_path: The full path where the main file was restored.
-    :param trashed_associated_path: The relative path of the associated file in the trash.
-    :param path_generator_func: The function to generate the new path (_get_thumbnail_full_path or _get_preview_full_path).
     """
     if trashed_associated_path:
         full_trashed_associated_path = os.path.abspath(os.path.join(image_library_root, trashed_associated_path))
@@ -715,6 +697,7 @@ def _restore_associated_file(final_restore_path, trashed_associated_path, path_g
             shutil.move(full_trashed_associated_path, expected_new_path)
 
 @app.route('/api/restore_file', methods=['POST'])
+@auth.login_required # MODIFIED: Add authentication decorator
 def restore_file():
     """Restores a file from TRASH_ROOT to its original location, and updates counts."""
     data = request.get_json()
@@ -724,13 +707,9 @@ def restore_file():
         return jsonify({"error": "Path not provided"}), 400
 
     try:
-        # The main logic is now in a helper function
         final_restore_path = restore_file_logic(file_relative_path_in_trash)
-
-        # This endpoint is responsible for updating counts for a single restore
         _update_folder_item_count_meta(TRASH_ROOT)
         _update_folder_item_count_meta(os.path.dirname(final_restore_path))
-
         return jsonify({"message": "File restored successfully"})
     except FileNotFoundError as e:
         return jsonify({"error": str(e)}), 404
@@ -741,6 +720,7 @@ def restore_file():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/create_folder', methods=['POST'])
+@auth.login_required # MODIFIED: Add authentication decorator
 def create_folder():
     """Creates a new folder at the specified parent path."""
     data = request.get_json()
@@ -765,11 +745,9 @@ def create_folder():
 
     try:
         os.makedirs(new_folder_full_path)
-        # Update count of parent folder (if applicable)
         if parent_path_segments:
             _update_folder_item_count_meta(full_parent_path)
 
-        # MODIFIED: Correctly format the location message to prevent error on empty path
         location_message = os.path.join(*parent_path_segments) if parent_path_segments else 'root'
         return jsonify({"message": f"Folder '{safe_folder_name}' created successfully at '{location_message}'."}), 201
     except Exception as e:
@@ -777,6 +755,7 @@ def create_folder():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/upload_file', methods=['POST'])
+@auth.login_required # MODIFIED: Add authentication decorator
 def upload_file():
     """Handles file uploads to the appropriate dated folder."""
     if 'file' not in request.files:
@@ -792,13 +771,10 @@ def upload_file():
     except json.JSONDecodeError:
         return jsonify({"error": "Invalid current_path format"}), 400
 
-    # Determine destination path
     destination_dir = os.path.join(image_library_root, *current_path_segments)
-
     os.makedirs(destination_dir, exist_ok=True)
     file_full_path = os.path.join(destination_dir, file.filename)
 
-    # Prevent overwriting existing files with the same name
     counter = 1
     original_name, ext = os.path.splitext(file.filename)
     while os.path.exists(file_full_path):
@@ -807,14 +783,12 @@ def upload_file():
 
     try:
         file.save(file_full_path)
-        # Check against extensions with leading dots
         if os.path.splitext(file.filename)[1].lower() in ALLOWED_IMAGE_EXTENSIONS or \
            os.path.splitext(file.filename)[1].lower() in ALLOWED_RAW_EXTENSIONS:
-            _generate_thumbnail(file_full_path) # Call helper function
+            _generate_thumbnail(file_full_path)
 
         _update_folder_item_count_meta(destination_dir)
 
-        # MODIFIED: Correctly format the success message to be more accurate and avoid TypeError
         final_destination_relative_path = os.path.relpath(os.path.dirname(file_full_path), image_library_root)
         return jsonify({"message": f"File '{os.path.basename(file_full_path)}' uploaded successfully to '{final_destination_relative_path}'"}), 200
     except Exception as e:
@@ -822,15 +796,15 @@ def upload_file():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/delete_folder', methods=['POST'])
+@auth.login_required # MODIFIED: Add authentication decorator
 def delete_folder():
     """Moves an entire folder and its contents to the trash folder."""
     data = request.get_json()
-    path_data = data.get('path') # Can be a string or a list
+    path_data = data.get('path')
 
     if not path_data:
         return jsonify({"error": "Folder path not provided"}), 400
 
-    # Ensure path_segments is a list
     if isinstance(path_data, str):
         folder_path_segments = path_data.split('/')
     elif isinstance(path_data, list):
@@ -848,9 +822,7 @@ def delete_folder():
         return jsonify({"error": "Folder not found"}), 404
 
     try:
-        # Get all media files recursively within the folder to be deleted
         files_to_trash = _get_media_files_in_directory(folder_full_path, include_subfolders=True)
-
         for file_info in files_to_trash:
             original_relative_path = file_info['original_path']
             original_file_full_path = os.path.abspath(os.path.join(image_library_root, original_relative_path))
@@ -862,10 +834,8 @@ def delete_folder():
             trash_filename = f"{name}_{timestamp}_{unique_id}{ext}"
             trash_full_path = os.path.join(TRASH_ROOT, trash_filename)
 
-            # Move main file
             shutil.move(original_file_full_path, trash_full_path)
 
-            # Move associated thumbnail if it exists
             original_thumbnail_full_path = _get_thumbnail_full_path(original_file_full_path)
             trashed_thumbnail_relative_path = None
             if os.path.isfile(original_thumbnail_full_path):
@@ -875,7 +845,6 @@ def delete_folder():
                 shutil.move(original_thumbnail_full_path, trashed_thumb_full_path)
                 trashed_thumbnail_relative_path = os.path.relpath(trashed_thumb_full_path, image_library_root).replace('\\', '/')
 
-            # Move associated preview if it exists
             original_preview_full_path = _get_preview_full_path(original_file_full_path)
             trashed_preview_relative_path = None
             if os.path.isfile(original_preview_full_path):
@@ -885,7 +854,6 @@ def delete_folder():
                 shutil.move(original_preview_full_path, trashed_preview_full_path)
                 trashed_preview_relative_path = os.path.relpath(trashed_preview_full_path, image_library_root).replace('\\', '/')
 
-            # Create metadata file for the trashed item
             metadata = {
                 'original_path': original_relative_path,
                 'trashed_at': datetime.now().isoformat(),
@@ -900,13 +868,10 @@ def delete_folder():
             with open(metadata_file_path, 'w') as f:
                 json.dump(metadata, f, indent=4)
 
-        # After moving all files, remove the now empty original folder structure
         shutil.rmtree(folder_full_path)
 
-        # Update counts for affected folders
-        # Update parent folder's count
         parent_folder_full_path = os.path.dirname(folder_full_path)
-        if parent_folder_full_path.startswith(image_library_root): # Ensure it's within media root
+        if parent_folder_full_path.startswith(image_library_root):
             _update_folder_item_count_meta(parent_folder_full_path)
         _update_folder_item_count_meta(TRASH_ROOT)
 
@@ -915,8 +880,8 @@ def delete_folder():
         print(f"ERROR: Error deleting folder: {type(e).__name__}: {e}")
         return jsonify({"error": str(e)}), 500
 
-# MODIFIED: Added endpoint to empty the trash
 @app.route('/api/empty_trash', methods=['POST'])
+@auth.login_required # MODIFIED: Add authentication decorator
 def empty_trash():
     """Permanently deletes all files and folders within the trash directory."""
     try:
@@ -932,35 +897,32 @@ def empty_trash():
         print(f"ERROR: Error emptying trash: {e}")
         return jsonify({"error": "Failed to empty trash."}), 500
 
-# MODIFIED: Added endpoint to restore all files from trash
 @app.route('/api/restore_all', methods=['POST'])
+@auth.login_required # MODIFIED: Add authentication decorator
 def restore_all():
     """Restores all files from the trash to their original locations."""
     try:
         parent_folders_to_update = set()
         for filename in os.listdir(TRASH_ROOT):
             if filename.endswith('.meta'):
-                continue # Skip metadata files in the initial loop
+                continue
 
             source_full_path = os.path.join(TRASH_ROOT, filename)
             if os.path.isfile(source_full_path):
-                # Construct the relative path for the restore_file function
                 relative_path_in_trash = os.path.join(TRASH_FOLDER_NAME, filename)
-                # Reuse the single-file restore logic
                 final_restore_path = restore_file_logic(relative_path_in_trash)
                 parent_folders_to_update.add(os.path.dirname(final_restore_path))
 
-        # Batch update counts
         for folder in parent_folders_to_update:
             _update_folder_item_count_meta(folder)
-        _update_folder_item_count_meta(TRASH_ROOT) # Final count update for trash
+        _update_folder_item_count_meta(TRASH_ROOT)
         return jsonify({"message": "All files have been restored."})
     except Exception as e:
         print(f"ERROR: Error during restore all: {e}")
         return jsonify({"error": "An error occurred during the restore all process."}), 500
 
-# NEW: Endpoint for deleting multiple files
 @app.route('/api/delete_multiple', methods=['POST'])
+@auth.login_required # MODIFIED: Add authentication decorator
 def delete_multiple():
     """Moves multiple files to the trash, or deletes them permanently from the trash."""
     data = request.get_json()
@@ -972,19 +934,15 @@ def delete_multiple():
 
     success_count = 0
     fail_count = 0
-
-    # Use a set to track which parent folders need their counts updated
     parent_folders_to_update = set()
 
     for path in paths:
         try:
             if is_permanent:
-                # Logic for permanent deletion (from trash)
                 full_path = os.path.abspath(os.path.join(image_library_root, path))
                 if not full_path.startswith(TRASH_ROOT) or not os.path.exists(full_path):
                     raise ValueError("File is not in trash or does not exist.")
 
-                # Delete metadata, thumbnail, preview, then the file itself
                 metadata_file_path = f"{full_path}.meta"
                 trashed_thumbnail_path = None
                 trashed_preview_path = None
@@ -1003,25 +961,20 @@ def delete_multiple():
                 os.remove(full_path)
 
             else:
-                # Logic for moving to trash
                 original_full_path = os.path.abspath(os.path.join(image_library_root, path))
                 if not original_full_path.startswith(image_library_root) or not os.path.exists(original_full_path):
                     raise ValueError("File is not in media library or does not exist.")
 
-                # Reuse single-file trash logic
                 move_to_trash_logic(path)
                 parent_folders_to_update.add(os.path.dirname(original_full_path))
-
             success_count += 1
         except Exception as e:
             print(f"Failed to process '{path}': {e}")
             fail_count += 1
 
-    # Update counts for all affected folders
     for folder in parent_folders_to_update:
         _update_folder_item_count_meta(folder)
 
-    # Always update trash count as well
     _update_folder_item_count_meta(TRASH_ROOT)
 
     return jsonify({
@@ -1030,8 +983,8 @@ def delete_multiple():
         "fail_count": fail_count
     })
 
-# NEW: Endpoint for restoring multiple files
 @app.route('/api/restore_multiple', methods=['POST'])
+@auth.login_required # MODIFIED: Add authentication decorator
 def restore_multiple():
     """Restores multiple files from the trash."""
     data = request.get_json()
@@ -1046,12 +999,10 @@ def restore_multiple():
 
     for path in paths:
         try:
-            # Security check to ensure file is in trash
             source_full_path = os.path.abspath(os.path.join(image_library_root, path))
             if not source_full_path.startswith(TRASH_ROOT):
                 raise ValueError(f"File '{path}' is not in the trash folder.")
 
-            # The single-file restore logic is reused here
             final_restore_path = restore_file_logic(path)
             parent_folders_to_update.add(os.path.dirname(final_restore_path))
             success_count += 1
@@ -1059,7 +1010,6 @@ def restore_multiple():
             print(f"ERROR: Failed to restore '{path}': {e}")
             fail_count += 1
 
-    # Update folder counts in a batch
     for folder in parent_folders_to_update:
         _update_folder_item_count_meta(folder)
     _update_folder_item_count_meta(TRASH_ROOT)
@@ -1082,14 +1032,12 @@ def move_to_trash_logic(file_relative_path):
     trash_filename = f"{name}_{timestamp}_{unique_id}{ext}"
     trash_full_path = os.path.join(TRASH_ROOT, trash_filename)
 
-    # Create metadata first
     metadata = {
         'original_path': file_relative_path,
         'trashed_at': datetime.now().isoformat(),
         'trashed_as': trash_filename
     }
 
-    # Handle thumbnail
     original_thumbnail_full_path = _get_thumbnail_full_path(original_full_path)
     if os.path.isfile(original_thumbnail_full_path):
         thumb_name, thumb_ext = os.path.splitext(os.path.basename(original_thumbnail_full_path))
@@ -1099,8 +1047,6 @@ def move_to_trash_logic(file_relative_path):
         shutil.move(original_thumbnail_full_path, trashed_thumb_full_path)
         metadata['trashed_thumbnail_path'] = os.path.relpath(trashed_thumb_full_path, image_library_root).replace('\\','/')
 
-
-    # Handle preview
     original_preview_full_path = _get_preview_full_path(original_full_path)
     if os.path.isfile(original_preview_full_path):
         preview_name, preview_ext = os.path.splitext(os.path.basename(original_preview_full_path))
@@ -1110,7 +1056,6 @@ def move_to_trash_logic(file_relative_path):
         shutil.move(original_preview_full_path, trashed_preview_full_path)
         metadata['trashed_preview_path'] = os.path.relpath(trashed_preview_full_path, image_library_root).replace('\\','/')
 
-    # Move main file and write metadata
     shutil.move(original_full_path, trash_full_path)
     metadata_file_path = f"{trash_full_path}.meta"
     with open(metadata_file_path, 'w') as f:
@@ -1132,7 +1077,6 @@ def restore_file_logic(file_relative_path_in_trash):
 
     metadata_file_path = f"{source_full_path_in_trash}.meta"
     if not os.path.exists(metadata_file_path):
-        # Fallback for items trashed before metadata existed
         raise FileNotFoundError(f"Metadata for file not found: {metadata_file_path}. Cannot restore.")
 
     with open(metadata_file_path, 'r') as f:
@@ -1156,22 +1100,20 @@ def restore_file_logic(file_relative_path_in_trash):
         new_filename = f"{os.path.basename(base_name)}{timestamp}{ext}"
         final_restore_path = os.path.abspath(os.path.join(image_library_root, dir_name, new_filename))
 
-    # Restore associated files first
     _restore_associated_file(final_restore_path, trashed_thumbnail_path, _get_thumbnail_full_path)
     _restore_associated_file(final_restore_path, trashed_preview_path, _get_preview_full_path)
 
-    # Move the main file
     shutil.move(source_full_path_in_trash, final_restore_path)
     os.remove(metadata_file_path)
 
-    # Return the path it was restored to, so the caller can update counts
     return final_restore_path
 
 
 if __name__ == '__main__':
-    _initial_scan_and_populate_counts() # Run initial scan on startup
-    # To run without SSL for local dev, comment out the ssl_context line
-    app.run(host='0.0.0.0', debug=True, port=PORT)
+    _initial_scan_and_populate_counts()
+    #app.run(host='0.0.0.0', debug=True, port=PORT)
 
-    # To run with SSL for local dev (you need to generate two pem files in the server.py directory)
-    # app.run(host='0.0.0.0', debug=True, port=PORT, ssl_context=('cert.pem', 'key.pem'))
+
+
+# To run with SSL for local dev (you need to generate two pem files in the server.py directory)
+    app.run(host='0.0.0.0', debug=True, port=PORT, ssl_context=('cert.pem', 'key.pem'))

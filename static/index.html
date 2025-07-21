@@ -36,20 +36,17 @@
                 <i class="material-icons">delete</i>
                 <span id="selectedCount" class="selected-count-badge">0</span>
             </button>
+            <!-- MODIFIED: Changed icon for Restore Selected button -->
             <button id="restoreSelectedBtn" class="circular-action-btn trash-restore-btn-style hidden" title="Restore Selected">
-                <i class="material-icons">restore_from_trash</i>
+                <span class="recycle-icon">&#9851;</span>
                 <span id="selectedRestoreCount" class="selected-count-badge">0</span>
             </button>
             <button id="deleteSelectedPermanentBtn" class="circular-action-btn trash-delete-btn-style hidden" title="Delete Selected Permanently">
                 <i class="material-icons">delete_forever</i>
                 <span id="selectedPermanentDeleteCount" class="selected-count-badge">0</span>
             </button>
-
-            <button id="restoreAllBtn" class="circular-action-btn trash-restore-btn-style hidden" title="Restore All Files">
-                <i class="material-icons">restore_from_trash</i>
-            </button>
-            <button id="emptyTrashBtn" class="circular-action-btn trash-delete-btn-style hidden" title="Empty Trash">
-                <i class="material-icons">delete_forever</i>
+            <button id="logoutBtn" class="circular-action-btn" title="Logout" style="background-color: rgba(239, 68, 68, 0.4);">
+                <i class="material-icons">logout</i>
             </button>
         </div>
 
@@ -87,8 +84,9 @@
             <button id="trashDeleteBtn" class="circular-action-btn trash-delete-btn-style" title="Move to Trash">
                 <i class="material-icons">delete</i>
             </button>
+            <!-- MODIFIED: Changed icon for single file Restore button -->
             <button id="trashRestoreBtn" class="circular-action-btn trash-restore-btn-style hidden" title="Restore File">
-                <i class="material-icons">restore_from_trash</i>
+                <span class="recycle-icon">&#9851;</span>
             </button>
         </div>
 
@@ -142,6 +140,20 @@
             </div>
         </div>
     </div>
+
+    <!-- NEW: Login Modal -->
+    <div id="loginModalOverlay" class="login-modal-overlay">
+        <div class="login-modal-content">
+            <h3>Login Required</h3>
+            <p id="loginErrorMessage" class="login-error-message hidden"></p>
+            <input type="text" id="usernameInput" placeholder="Username" autocomplete="username">
+            <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password">
+            <div class="modal-buttons">
+                <button id="loginBtn" class="confirm-btn">Login</button>
+            </div>
+        </div>
+    </div>
+
 
     <div id="messageBox"></div>
 

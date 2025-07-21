@@ -22,19 +22,11 @@ export function showConfirmationModal(actionTarget, isPermanentDelete = false, i
 
     let msg = '', btnText = '';
 
-    if (actionTarget === 'empty_trash') {
-        msg = "Are you sure you want to permanently delete ALL items in the trash? This action cannot be undone.";
-        btnText = "Empty Trash";
-    } else if (actionTarget === 'restore_all') {
-        msg = "Are you sure you want to restore ALL items from the trash to their original locations?";
-        btnText = "Restore All";
-    } else if (Array.isArray(actionTarget) && isRestore) {
-        // NEW: Handles restoring multiple selected files
+    if (Array.isArray(actionTarget) && isRestore) {
         const count = actionTarget.length;
         msg = `Are you sure you want to restore ${count} selected item(s)?`;
         btnText = `Restore ${count} Item(s)`;
     } else if (Array.isArray(actionTarget) && typeof actionTarget[0] === 'string') {
-        // Handles multiple file deletion
         const count = actionTarget.length;
         const permanentText = isPermanentDelete ? " permanently" : "";
         msg = `Are you sure you want to${permanentText} delete ${count} selected item(s)?`;
@@ -69,18 +61,10 @@ async function handleConfirmAction() {
     const oldIndex = state.currentMediaIndex;
 
     try {
-        if (state.fileToProcessPath === 'empty_trash') {
-            await api.emptyTrash();
-            ui.showMessage('Trash emptied successfully.', 'success');
-        } else if (state.fileToProcessPath === 'restore_all') {
-            await api.restoreAll();
-            ui.showMessage('All files restored.', 'success');
-        } else if (Array.isArray(state.fileToProcessPath) && dom.confirmActionBtn.textContent.includes("Restore")) {
-            // NEW: Handles the action for restoring multiple files
+        if (Array.isArray(state.fileToProcessPath) && dom.confirmActionBtn.textContent.includes("Restore")) {
             await api.restoreMultiple(state.fileToProcessPath);
             ui.showMessage(`${state.fileToProcessPath.length} files restored.`, 'success');
         } else if (Array.isArray(state.fileToProcessPath)) {
-            // Handles multi-delete
             const isPermanent = state.currentPath.includes(config.TRASH_FOLDER_NAME);
             await api.deleteMultiple(state.fileToProcessPath, isPermanent);
             ui.showMessage(`${state.fileToProcessPath.length} files deleted.`, 'success');
