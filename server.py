@@ -1,7 +1,7 @@
 # ######## YOUR SETUP #############
 
 PORT=8080 # Flask server port number
-GALLERY='/Volumes/aa3025_bkp/Photos_Backup' # all the gallery files are here
+GALLERY='/absolute/path/to/my/gallery' # all the gallery photo files are here
 
 #################################
 
@@ -34,7 +34,7 @@ auth = HTTPBasicAuth() # ADDED: Initialize the authentication handler
 # --- User Authentication ---
 # ADDED: Credentials for the server
 users = {
-    "aa3025": "ghjnjcc"
+    "user": "gallery"
 }
 
 @auth.verify_password
@@ -1111,9 +1111,9 @@ def restore_file_logic(file_relative_path_in_trash):
 
 if __name__ == '__main__':
     _initial_scan_and_populate_counts()
-    #app.run(host='0.0.0.0', debug=True, port=PORT)
+    app.run(host='0.0.0.0', debug=True, port=PORT)
 
 
 
 # To run with SSL for local dev (you need to generate two pem files in the server.py directory)
-    app.run(host='0.0.0.0', debug=True, port=PORT, ssl_context=('cert.pem', 'key.pem'))
+    #app.run(host='0.0.0.0', debug=True, port=PORT, ssl_context=('cert.pem', 'key.pem'))
