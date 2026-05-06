@@ -225,4 +225,4 @@ http://localhost:8080
 
 ---
 
-Created with the help of Google Gemini 2.5 Flash (it was a struggle :)
+Initially created with the help of Google Gemini 2.5 Flash (it was a struggle :) and improved using GitHub CoPilot (way easier).
