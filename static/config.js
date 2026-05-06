@@ -1,5 +1,6 @@
 // --- Configuration for Image Library Path ---
 export const TRASH_FOLDER_NAME = '_Trash'; // Keep this consistent with server.py
+export const ALBUMS_VIRTUAL_ROOT = '__albums__';
 
 // Define image and video extensions for client-side check (matching server.py)
 export const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.avif'];

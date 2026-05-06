@@ -1,0 +1,260 @@
+2026-05-04
+Project: photogallery
+Task: Fix previously identified security/runtime/frontend flaws and document changes
+
+Summary
+- Hardened backend path validation across API endpoints to prevent traversal and boundary bypasses.
+- Replaced hardcoded credentials with required environment variables.
+- Switched auth comparison to constant-time checks.
+- Fixed folder sorting bug that could raise TypeError with mixed month/non-month names.
+- Fixed folder deletion modal routing bug in frontend.
+- Removed browser sessionStorage credential persistence.
+- Switched Flask runtime debug behavior to environment-controlled settings.
+- Added requirements.txt and updated README setup instructions.
+
+Detailed Changes
+
+1) server.py
+- Added import: hmac
+- Replaced hardcoded users dict authentication:
+  - Added env-configured auth variables:
+    - GALLERY_USERNAME
+    - GALLERY_PASSWORD
+  - App now raises RuntimeError on startup if either variable is missing.
+  - verify_password now uses hmac.compare_digest for username/password.
+
+- Added path safety helpers:
+  - _normalize_path(path)
+  - _is_within_root(path, root)
+  - _resolve_in_root(root, *segments)
+
+- Updated base path setup:
+  - image_library_root now normalized via _normalize_path
+  - TRASH_ROOT now resolved via _resolve_in_root
+
+- Secured endpoint path handling:
+  - /api/folders
+  - /api/media/<path>
+  - /api/thumbnail/<path>
+  - /api/recursive_media/<path>
+  - /api/download_original_raw/<path>
+  - /api/move_to_trash
+  - /api/delete_file_forever
+  - /api/create_folder
+  - /api/upload_file
+  - /api/delete_folder
+  - /api/delete_multiple
+  - /api/restore_multiple
+  - move_to_trash_logic
+  - restore_file_logic
+  - _restore_associated_file
+
+- Upload hardening:
+  - Validates current_path is a list of strings.
+  - Sanitizes filename via secure_filename.
+  - Enforces allowed_file type check.
+  - Blocks upload into trash root.
+
+- Fixed folder sorting bug in /api/folders:
+  - Replaced mixed int/str sort key with stable tuple-based key.
+
+- Runtime safety:
+  - Replaced debug=True with env-driven FLASK_DEBUG switch.
+  - Added optional SSL runtime config via:
+    - GALLERY_SSL_CERT
+    - GALLERY_SSL_KEY
+
+2) static/modals.js
+- Fixed folder-action routing in confirmation modal:
+  - showConfirmationModal now accepts explicit fourth arg isFolderAction (default false).
+  - Folder deletion state now depends on explicit flag instead of brittle array-type inference.
+
+3) static/ui.js
+- Updated folder delete button callback:
+  - showConfirmationModal(pathSegments, false, false, true)
+  - Ensures folder delete flows to deleteFolder API path.
+
+4) static/api.js
+- Removed sessionStorage credential persistence:
+  - setCredentials no longer writes sessionStorage.
+  - clearCredentials no longer clears sessionStorage.
+  - hasCredentials now checks in-memory value only.
+
+5) README.md
+- Fixed clone command:
+  - git clone https://github.com/aa3025/photogallery
+- Removed instruction to manually create requirements.txt.
+- Added required auth environment variable instructions.
+- Added optional runtime environment variables (debug/SSL).
+- Clarified HTTP behavior when SSL env vars are not set.
+
+6) requirements.txt (new)
+- Added pinned dependency list used by project:
+  - Flask
+  - Flask-HTTPAuth
+  - Pillow
+  - rawpy
+  - opencv-python
+  - numpy
+  - imageio
+  - pillow-heif
+
+Validation Performed
+- python3 -m py_compile server.py
+  - Result: success (no syntax errors)
+- Repository diagnostics scan
+  - Result: no editor-reported errors
+- Pattern check for previously flagged risky strings
+  - Removed:
+    - debug=True
+    - hardcoded users dict in server auth
+    - sessionStorage credential usage in frontend
+    - startswith/TRASH_ROOT substring boundary checks for security-sensitive route guards
+
+Behavior Changes
+- Credentials are no longer persisted in browser sessionStorage.
+  - Users must log in again after full page reload.
+- App now requires environment variables GALLERY_USERNAME and GALLERY_PASSWORD at startup.
+- Debug mode is off by default unless FLASK_DEBUG=1.
+
+Post-change Run Example
+- export GALLERY_USERNAME='user'
+- export GALLERY_PASSWORD='change-me'
+- python3 server.py
+
+2026-05-05
+Project: photogallery
+Task: Remove duplicate auth prompts by using HTTP Basic auth only
+
+Summary
+- Eliminated double authentication flow (custom modal + browser HTTP auth prompt).
+- Switched to browser-managed HTTP Basic authentication as the single mechanism.
+- Protected main page route so auth happens before UI load.
+- Removed client-side credential storage and Authorization header injection logic.
+- Removed custom login modal and logout button wiring from frontend.
+
+Detailed Changes
+
+1) server.py
+- Protected index route with Basic auth:
+  - Added @auth.login_required to / route.
+- Updated index route docstring to reflect authentication requirement.
+
+2) static/api.js
+- Removed in-browser credential management helpers:
+  - setCredentials
+  - clearCredentials
+  - hasCredentials
+- Removed Basic Authorization header generation/injection from authorizedFetch.
+- Kept fetch wrapper behavior for JSON/FormData Content-Type handling.
+
+3) static/main.js
+- Removed custom login modal flow:
+  - showLoginModal
+  - hideLoginModal
+  - handleLogin
+  - handleLogout
+- Removed login/logout event listeners and initial credential checks.
+- Initial load now calls navigateToPath([]) directly.
+- On Unauthorized during navigation, app reloads page to let browser re-run Basic auth flow.
+
+4) static/dom-elements.js
+- Removed DOM references for removed auth UI elements:
+  - logoutBtn
+  - loginModalOverlay
+  - usernameInput
+  - passwordInput
+  - loginBtn
+  - loginErrorMessage
+
+5) static/index.html
+- Removed Logout button from top-right action buttons.
+- Removed custom Login modal markup (overlay, inputs, button, error message).
+
+Validation Performed
+- Searched for stale references to removed auth functions/elements.
+  - Result: none found.
+- Editor diagnostics check on modified files:
+  - server.py: no errors
+  - static/api.js: no errors
+  - static/main.js: no errors
+  - static/dom-elements.js: no errors
+  - static/index.html: no errors
+
+Behavior Changes
+- Browser now presents a single HTTP Basic auth prompt when required.
+- Custom in-page login modal is removed.
+- Explicit logout UI is removed (browser controls Basic auth credential caching behavior).
+
+2026-05-06
+Project: photogallery
+Task: Add JSON-backed albums, improve selection UX, polish lightbox/toolbar behavior, and refresh docs
+
+Summary
+- Replaced CSV-driven albums with app-managed virtual albums stored in JSON.
+- Added album create/add/remove flows in backend and frontend.
+- Moved album persistence to `GALLERY_ALBUMS_DB_PATH`, typically `${GALLERY_PATH}/albums.json`.
+- Added Albums navigation on the landing page and kept the top-right toolbar fixed while scrolling.
+- Hid the fixed toolbar during lightbox view to avoid overlap with lightbox controls.
+- Removed the lighter inner dark-mode canvas panel.
+- Added marquee drag selection with additive behavior, page-margin start, auto-scroll, and native browser selection suppression.
+- Added a dedicated `Deselect All` action and fixed play/pause icon visibility in lightbox.
+- Replaced Tailwind runtime CDN script with a static stylesheet link.
+- Updated README to match the current startup flow and feature set.
+
+Detailed Changes
+
+1) server.py
+- Added JSON albums store helpers and runtime detection for the albums database path.
+- Added album APIs:
+  - `GET /api/albums`
+  - `GET /api/albums/<album_name>`
+  - `POST /api/albums`
+  - `POST /api/albums/add`
+  - `POST /api/albums/remove`
+- Album membership now stores canonical media paths instead of CSV basename matches.
+
+2) static/main.js
+- Added drag-to-select rectangle logic for thumbnails.
+- Drag selection now:
+  - starts from page margins while in gallery media view
+  - adds to existing selection by default
+  - auto-scrolls near viewport edges
+  - suppresses accidental browser text selection
+- Added `Deselect All` button handling.
+
+3) static/ui.js
+- Added Albums breadcrumb button on the root landing page.
+- Updated action visibility for album mode and lightbox interactions.
+
+4) static/lightbox.js
+- Added `body.lightbox-open` state toggling.
+- Ensures breadcrumb toolbar is hidden while lightbox is open.
+
+5) static/index.html
+- Added `Deselect All` button to the selection toolbar.
+- Replaced Tailwind runtime script with a static Tailwind stylesheet link.
+
+6) static/styles.css
+- Made breadcrumb action toolbar fixed while scrolling.
+- Added rule to hide that toolbar during lightbox view.
+- Added Albums breadcrumb icon styling.
+- Removed dark theme inner container panel by making `.container` transparent/shadowless.
+- Added marquee selection box and drag-selection cursor styles.
+- Fixed `.hidden` precedence for play/pause and theme icons.
+
+7) README.md
+- Updated setup to prefer `./start_server.sh` and `.gallery.env`.
+- Documented `GALLERY_PATH`, `GALLERY_PORT`, and `GALLERY_ALBUMS_DB_PATH`.
+- Added albums and drag-select UX to the feature list.
+- Corrected Tailwind usage description.
+
+Validation Performed
+- Editor diagnostics on touched frontend files.
+  - Result: no editor-reported errors in modified JS/CSS/HTML files.
+
+Behavior Changes
+- Albums are now first-class virtual collections stored in JSON rather than imported from CSV basenames.
+- The top-right action toolbar stays visible while scrolling, except inside lightbox.
+- Gallery multi-select behaves more like a desktop file explorer.
+- Tailwind no longer emits the runtime CDN warning in the browser console.

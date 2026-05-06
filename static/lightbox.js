@@ -17,6 +17,7 @@ export function openLightbox(index) {
         state.setCurrentMediaIndex(index);
         updateLightboxMedia();
         dom.lightboxOverlay.classList.add('active');
+        document.body.classList.add('lightbox-open');
         document.body.style.overflow = 'hidden';
         updateSlideshowControls();
         updateActionButtonsVisibility();
@@ -25,6 +26,7 @@ export function openLightbox(index) {
 
 export function closeLightbox() {
     dom.lightboxOverlay.classList.remove('active');
+    document.body.classList.remove('lightbox-open');
     document.body.style.overflow = '';
     const video = dom.lightboxMediaDisplay.querySelector('video');
     if (video) video.pause();

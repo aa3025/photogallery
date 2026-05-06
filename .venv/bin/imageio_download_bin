@@ -1,0 +1,6 @@
+#!/Volumes/Elements-aa3025/GitHub/photogallery/.venv/bin/python
+import sys
+from imageio.__main__ import download_bin_main
+if __name__ == '__main__':
+    sys.argv[0] = sys.argv[0].removesuffix('.exe')
+    sys.exit(download_bin_main())

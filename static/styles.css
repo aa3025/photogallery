@@ -43,8 +43,8 @@
         }
         /* Container Dark Theme */
         body[data-theme='dark'] .container {
-            background-color: #2d3748; /* Slightly lighter dark background for the container */
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); /* Stronger shadow for dark theme */
+            background-color: transparent;
+            box-shadow: none;
         }
 
         /* Specific max-width for very large screens */
@@ -479,6 +479,22 @@
             display: none;
         }
 
+        .albums-breadcrumb-btn {
+            width: 40px !important;
+            height: 40px !important;
+            padding: 0 !important;
+            font-size: 1.2rem;
+            background-color: transparent !important;
+            box-shadow: none !important;
+        }
+        .albums-breadcrumb-btn .material-icons {
+            font-size: 3rem !important;
+            line-height: 1;
+        }
+        .albums-breadcrumb-btn .folder-name-overlay {
+            display: none;
+        }
+
         /* Specific styles for trash and restore buttons */
         .trash-delete-btn-style {
             background-color: rgba(220, 38, 38, 0.4); /* Red background */
@@ -655,6 +671,12 @@
             justify-content: center;
             align-items: center;
         }
+        .play_icon.hidden,
+        .pause_icon.hidden,
+        .light_mode_icon.hidden,
+        .dark_mode_icon.hidden {
+            display: none !important;
+        }
         .material-icons {
             font-family: 'Material Icons';
             font-weight: normal;
@@ -704,14 +726,20 @@
         }
         /* Positioning for action buttons in the breadcrumb area */
         #breadcrumbActionButtonsContainer {
-            position: absolute; /* Changed to absolute positioning */
+            position: fixed;
             top: 14px; /* Adjusted to be near the top right of the container */
             right: 10px; /* Adjusted to be near the top right of the container */
             display: flex;
             flex-direction: column; /* Changed to column for vertical stacking */
             gap: 10px; /* Space between buttons */
             align-items: center; /* Horizontally align items in the column */
-            z-index: 500; /* Ensure it's above other breadcrumb content if needed */
+            z-index: 1200;
+        }
+
+        body.lightbox-open #breadcrumbActionButtonsContainer {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
         }
 
         /* Loading spinner styles */
@@ -968,9 +996,31 @@
             background-color: #f0f0f0;
             color: #333;
         }
+        .create-folder-modal-content select {
+            width: calc(100% - 2rem);
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        .create-folder-modal-content select option {
+            color: #333;
+            background-color: #ffffff;
+        }
         body[data-theme='dark'] .create-folder-modal-content input {
             background-color: #4a5568;
             border-color: #6a768f;
+            color: #e2e8f0;
+        }
+        body[data-theme='dark'] .create-folder-modal-content select {
+            background-color: #4a5568;
+            border-color: #6a768f;
+            color: #e2e8f0;
+        }
+        body[data-theme='dark'] .create-folder-modal-content select option {
+            background-color: #2d3748;
             color: #e2e8f0;
         }
         .create-folder-modal-content .modal-buttons button {
@@ -1197,6 +1247,20 @@
         .thumbnail-checkbox:checked {
             background-color: green;
             accent-color: green; 
+        }
+
+        body.drag-selecting {
+            user-select: none;
+            cursor: crosshair;
+        }
+
+        .drag-select-box {
+            position: fixed;
+            border: 1px solid rgba(79, 70, 229, 0.95);
+            background-color: rgba(79, 70, 229, 0.2);
+            border-radius: 6px;
+            pointer-events: none;
+            z-index: 950;
         }
 
         .selected-count-badge {

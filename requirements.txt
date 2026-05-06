@@ -1,0 +1,8 @@
+Flask
+Flask-HTTPAuth
+Pillow
+rawpy
+opencv-python
+numpy
+imageio
+pillow-heif

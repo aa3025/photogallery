@@ -9,52 +9,233 @@ import * as lightbox from './lightbox.js';
 import * as modals from './modals.js';
 import * as config from './config.js';
 
-// --- Authentication Logic ---
 
-function showLoginModal(errorMessage = '') {
-    dom.loginErrorMessage.textContent = errorMessage;
-    dom.loginErrorMessage.classList.toggle('hidden', !errorMessage);
-    dom.loginModalOverlay.classList.add('active');
-    dom.usernameInput.focus();
+function isAlbumsMode(path = state.currentPath) {
+    return path[0] === config.ALBUMS_VIRTUAL_ROOT;
 }
 
-function hideLoginModal() {
-    dom.loginModalOverlay.classList.remove('active');
-    dom.usernameInput.value = '';
-    dom.passwordInput.value = '';
-    dom.loginErrorMessage.classList.add('hidden');
+const dragSelect = {
+    isPointerDown: false,
+    isDragging: false,
+    startX: 0,
+    startY: 0,
+    currentX: 0,
+    currentY: 0,
+    additiveMode: false,
+    suppressClickOnce: false,
+    framePending: false,
+    autoScrollFrame: null,
+    boxEl: null,
+    initialSelection: new Set()
+};
+
+const DRAG_SCROLL_EDGE_PX = 80;
+const DRAG_SCROLL_MAX_SPEED = 18;
+
+function clearAllSelections() {
+    dom.galleryContainer.querySelectorAll('.thumbnail-checkbox').forEach((cb) => {
+        cb.checked = false;
+        cb.closest('.gallery-item')?.classList.remove('selected');
+    });
 }
 
-async function handleLogin() {
-    const username = dom.usernameInput.value.trim();
-    const password = dom.passwordInput.value.trim();
+function rectsIntersect(a, b) {
+    return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
+}
 
-    if (!username || !password) {
-        showLoginModal('Username and password are required.');
+function updateDragSelectionVisual() {
+    dragSelect.framePending = false;
+    if (!dragSelect.isDragging || !dragSelect.boxEl) return;
+
+    const left = Math.min(dragSelect.startX, dragSelect.currentX);
+    const top = Math.min(dragSelect.startY, dragSelect.currentY);
+    const width = Math.abs(dragSelect.currentX - dragSelect.startX);
+    const height = Math.abs(dragSelect.currentY - dragSelect.startY);
+
+    dragSelect.boxEl.style.left = `${left}px`;
+    dragSelect.boxEl.style.top = `${top}px`;
+    dragSelect.boxEl.style.width = `${width}px`;
+    dragSelect.boxEl.style.height = `${height}px`;
+
+    const selectionRect = {
+        left,
+        top,
+        right: left + width,
+        bottom: top + height
+    };
+
+    const items = dom.galleryContainer.querySelectorAll('.gallery-item');
+    items.forEach((item) => {
+        const checkbox = item.querySelector('.thumbnail-checkbox');
+        if (!checkbox) return;
+
+        const intersects = rectsIntersect(selectionRect, item.getBoundingClientRect());
+        const wasSelected = dragSelect.initialSelection.has(checkbox.dataset.path);
+        const shouldSelect = dragSelect.additiveMode ? (wasSelected || intersects) : intersects;
+
+        checkbox.checked = shouldSelect;
+        item.classList.toggle('selected', shouldSelect);
+    });
+
+    handleSelectionChange();
+}
+
+function scheduleDragSelectionUpdate() {
+    if (dragSelect.framePending) return;
+    dragSelect.framePending = true;
+    window.requestAnimationFrame(updateDragSelectionVisual);
+}
+
+function calculateAutoScrollDeltaY(pointerY) {
+    if (pointerY < DRAG_SCROLL_EDGE_PX) {
+        const ratio = (DRAG_SCROLL_EDGE_PX - pointerY) / DRAG_SCROLL_EDGE_PX;
+        return -Math.max(1, Math.round(DRAG_SCROLL_MAX_SPEED * ratio));
+    }
+
+    const bottomEdgeStart = window.innerHeight - DRAG_SCROLL_EDGE_PX;
+    if (pointerY > bottomEdgeStart) {
+        const ratio = (pointerY - bottomEdgeStart) / DRAG_SCROLL_EDGE_PX;
+        return Math.max(1, Math.round(DRAG_SCROLL_MAX_SPEED * ratio));
+    }
+
+    return 0;
+}
+
+function stopAutoScrollLoop() {
+    if (dragSelect.autoScrollFrame !== null) {
+        window.cancelAnimationFrame(dragSelect.autoScrollFrame);
+        dragSelect.autoScrollFrame = null;
+    }
+}
+
+function runAutoScrollLoop() {
+    if (!dragSelect.isDragging) {
+        stopAutoScrollLoop();
         return;
     }
 
-    api.setCredentials(username, password);
+    const deltaY = calculateAutoScrollDeltaY(dragSelect.currentY);
+    if (deltaY !== 0) {
+        window.scrollBy(0, deltaY);
+        scheduleDragSelectionUpdate();
+    }
 
-    try {
-        // Try a simple API call to verify credentials
-        await api.getFolders(); 
-        hideLoginModal();
-        navigateToPath([]); // Load the gallery content
-    } catch (error) {
-        if (error.message === 'Unauthorized') {
-            showLoginModal('Invalid username or password.');
-        } else {
-            showLoginModal('An error occurred. Please try again.');
+    dragSelect.autoScrollFrame = window.requestAnimationFrame(runAutoScrollLoop);
+}
+
+function ensureAutoScrollLoop() {
+    if (dragSelect.autoScrollFrame !== null) return;
+    dragSelect.autoScrollFrame = window.requestAnimationFrame(runAutoScrollLoop);
+}
+
+function finishDragSelection() {
+    dragSelect.isPointerDown = false;
+
+    if (dragSelect.isDragging) {
+        dragSelect.suppressClickOnce = true;
+    }
+
+    dragSelect.isDragging = false;
+    dragSelect.initialSelection.clear();
+    dragSelect.framePending = false;
+    stopAutoScrollLoop();
+
+    if (dragSelect.boxEl) {
+        dragSelect.boxEl.remove();
+        dragSelect.boxEl = null;
+    }
+    document.body.classList.remove('drag-selecting');
+}
+
+function canStartDragSelection(e) {
+    if (dom.lightboxOverlay.classList.contains('active')) return false;
+    if (dom.gallerySection.classList.contains('hidden')) return false;
+    if (dom.galleryContainer.querySelectorAll('.gallery-item').length === 0) return false;
+
+    if (e.target.closest('.thumbnail-checkbox')) return false;
+    if (e.target.closest('button, a, input, select, textarea, label')) return false;
+    if (e.target.closest('#breadcrumbActionButtonsContainer, .breadcrumb, #topLevelFoldersSection, #subFoldersSection')) return false;
+    if (e.target.closest('.confirmation-modal-overlay, .create-folder-modal-overlay, .lightbox-overlay')) return false;
+
+    return true;
+}
+
+function startDragSelectionFromEvent(e) {
+    if (dragSelect.isPointerDown) return;
+    if (e.button !== 0) return;
+    if (!canStartDragSelection(e)) return;
+
+    dragSelect.isPointerDown = true;
+    dragSelect.isDragging = false;
+    dragSelect.startX = e.clientX;
+    dragSelect.startY = e.clientY;
+    dragSelect.currentX = e.clientX;
+    dragSelect.currentY = e.clientY;
+    dragSelect.additiveMode = true;
+    dragSelect.initialSelection = new Set(
+        Array.from(dom.galleryContainer.querySelectorAll('.thumbnail-checkbox:checked')).map((cb) => cb.dataset.path)
+    );
+
+    // Prevent native browser text selection from kicking in at drag start.
+    e.preventDefault();
+}
+
+function moveDragSelectionFromEvent(e) {
+    if (!dragSelect.isPointerDown) return;
+
+    dragSelect.currentX = e.clientX;
+    dragSelect.currentY = e.clientY;
+
+    const dx = Math.abs(dragSelect.currentX - dragSelect.startX);
+    const dy = Math.abs(dragSelect.currentY - dragSelect.startY);
+    if (!dragSelect.isDragging && (dx > 4 || dy > 4)) {
+        dragSelect.isDragging = true;
+        document.body.classList.add('drag-selecting');
+        dragSelect.boxEl = document.createElement('div');
+        dragSelect.boxEl.className = 'drag-select-box';
+        document.body.appendChild(dragSelect.boxEl);
+
+        if (!dragSelect.additiveMode) {
+            clearAllSelections();
         }
-        api.clearCredentials(); // Clear bad credentials
+    }
+
+    if (dragSelect.isDragging) {
+        scheduleDragSelectionUpdate();
+        ensureAutoScrollLoop();
+        e.preventDefault();
     }
 }
 
-function handleLogout() {
-    api.clearCredentials();
-    // Reload the page to force login
-    window.location.reload();
+function setupDragSelection() {
+    document.addEventListener('pointerdown', startDragSelectionFromEvent);
+    document.addEventListener('pointermove', moveDragSelectionFromEvent);
+    document.addEventListener('pointerup', () => {
+        if (!dragSelect.isPointerDown) return;
+        finishDragSelection();
+    });
+
+    // Fallback for browsers/input devices where pointer events are inconsistent.
+    document.addEventListener('mousedown', startDragSelectionFromEvent);
+    document.addEventListener('mousemove', moveDragSelectionFromEvent);
+    document.addEventListener('mouseup', () => {
+        if (!dragSelect.isPointerDown) return;
+        finishDragSelection();
+    });
+
+    dom.galleryContainer.addEventListener('click', (e) => {
+        if (!dragSelect.suppressClickOnce) return;
+        dragSelect.suppressClickOnce = false;
+        e.preventDefault();
+        e.stopPropagation();
+    }, true);
+
+    // Guard against native browser text selection while marquee-selection is active.
+    document.addEventListener('selectstart', (e) => {
+        if (!dragSelect.isPointerDown && !dragSelect.isDragging) return;
+        if (e.target.closest('input, textarea, select')) return;
+        e.preventDefault();
+    });
 }
 
 
@@ -67,22 +248,29 @@ function handleSelectionChange() {
 
     const count = state.selectedFiles.length;
     const isViewingTrash = state.currentPath.includes(config.TRASH_FOLDER_NAME);
+    const isViewingAlbums = isAlbumsMode();
+    const isViewingAlbumContent = isViewingAlbums && state.currentPath.length > 1;
 
     // Update the 'Delete Selected' button (for regular folders)
     dom.selectedCount.textContent = count;
-    dom.deleteSelectedBtn.classList.toggle('hidden', count === 0 || isViewingTrash);
+    dom.deleteSelectedBtn.classList.toggle('hidden', count === 0 || isViewingTrash || (isViewingAlbums && !isViewingAlbumContent));
+    dom.deleteSelectedBtn.title = isViewingAlbumContent ? 'Remove Selected From Album' : 'Delete Selected';
+
+    // Show add-to-album action for selected media outside trash
+    dom.addToAlbumBtn.classList.toggle('hidden', count === 0 || isViewingTrash);
 
     // Update the 'Restore Selected' button (for trash)
     dom.selectedRestoreCount.textContent = count;
-    dom.restoreSelectedBtn.classList.toggle('hidden', count === 0 || !isViewingTrash);
+    dom.restoreSelectedBtn.classList.toggle('hidden', count === 0 || !isViewingTrash || isViewingAlbums);
 
     // Update the new 'Delete Selected Permanently' button (for trash)
     dom.selectedPermanentDeleteCount.textContent = count;
-    dom.deleteSelectedPermanentBtn.classList.toggle('hidden', count === 0 || !isViewingTrash);
+    dom.deleteSelectedPermanentBtn.classList.toggle('hidden', count === 0 || !isViewingTrash || isViewingAlbums);
 
     // MODIFIED: Show 'Select All' button whenever there are items, including in trash
     const allCheckboxes = dom.galleryContainer.querySelectorAll('.thumbnail-checkbox');
     dom.selectAllBtn.classList.toggle('hidden', allCheckboxes.length === 0);
+    dom.deselectAllBtn.classList.toggle('hidden', count === 0);
 }
 
 
@@ -109,6 +297,12 @@ async function navigateToPath(pathSegments) {
     try {
         if (pathSegments.length === 0) {
             await loadTopLevelFolders();
+        } else if (pathSegments[0] === config.ALBUMS_VIRTUAL_ROOT) {
+            if (pathSegments.length === 1) {
+                await loadAlbums();
+            } else {
+                await loadAlbumContent(pathSegments[1]);
+            }
         } else if (pathSegments[0] === config.TRASH_FOLDER_NAME) {
             await loadTrashContent();
         } else {
@@ -117,9 +311,8 @@ async function navigateToPath(pathSegments) {
     } catch (error) {
         console.error('Navigation error:', error);
         if (error.message === 'Unauthorized') {
-            // If session expires or credentials become invalid, force re-login
-            api.clearCredentials();
-            showLoginModal('Your session has expired. Please login again.');
+            // Trigger a full reload so the browser can re-run HTTP Basic auth flow.
+            window.location.reload();
         } else {
             ui.showMessage(`Error loading content: ${error.message}`, 'error');
         }
@@ -145,6 +338,42 @@ async function loadTopLevelFolders() {
 
     state.setCurrentDisplayedMedia(data.files);
     ui.displayMediaThumbnails(data.files, handleSelectionChange);
+    ui.updateActionButtonsVisibility();
+    handleSelectionChange();
+}
+
+async function loadAlbums() {
+    dom.topLevelFoldersSection.classList.remove('hidden');
+    dom.topLevelFoldersContainer.innerHTML = '<p>Loading...</p>';
+
+    const data = await api.getAlbums();
+
+    dom.topLevelFoldersContainer.innerHTML = '';
+    (data.albums || []).forEach(album => {
+        const link = ui.createFolderNavLink(album.name, [config.ALBUMS_VIRTUAL_ROOT, album.name], album.count, false, false, navigateToPath, 'folder_special');
+        dom.topLevelFoldersContainer.appendChild(link);
+    });
+
+    dom.topLevelFoldersContainer.appendChild(ui.createAddAlbumButton(modals.showCreateAlbumModal));
+
+    state.setCurrentDisplayedMedia([]);
+    dom.gallerySection.classList.add('hidden');
+    ui.updateActionButtonsVisibility();
+    handleSelectionChange();
+}
+
+async function loadAlbumContent(albumName) {
+    dom.gallerySection.classList.remove('hidden');
+    dom.galleryContainer.innerHTML = '<p>Loading...</p>';
+
+    const data = await api.getAlbumMedia(albumName);
+    state.setCurrentDisplayedMedia(data.files || []);
+    ui.displayMediaThumbnails(state.currentDisplayedMedia, handleSelectionChange);
+
+    if ((data.missing || []).length > 0) {
+        ui.showMessage(`Album loaded with ${data.missing.length} missing file(s).`, 'info');
+    }
+
     ui.updateActionButtonsVisibility();
     handleSelectionChange();
 }
@@ -187,7 +416,7 @@ async function toggleSlideshow() {
         if (video) video.pause();
     } else {
         try {
-            const media = await api.getRecursiveMedia(state.currentPath);
+            const media = isAlbumsMode() ? state.currentDisplayedMedia : await api.getRecursiveMedia(state.currentPath);
             if (media.length === 0) {
                 ui.showMessage('No media found for slideshow.', 'info');
                 return;
@@ -222,6 +451,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     dom.homeBtnTopRight.addEventListener('click', () => navigateToPath([]));
+    dom.albumsBtnTopRight.addEventListener('click', () => navigateToPath([config.ALBUMS_VIRTUAL_ROOT]));
     dom.slideshowBtnBreadcrumb.addEventListener('click', toggleSlideshow);
     dom.slideshowBtnLightbox.addEventListener('click', toggleSlideshow);
 
@@ -244,8 +474,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     dom.trashDeleteBtn.addEventListener('click', () => {
         const isViewingTrash = state.currentPath.includes(config.TRASH_FOLDER_NAME);
+        const isViewingAlbums = isAlbumsMode();
         const mediaItem = state.currentDisplayedMedia[state.currentMediaIndex];
+        if (!mediaItem) return;
+
         const pathForAction = isViewingTrash ? mediaItem.relative_path_in_trash : mediaItem.original_path;
+        if (isViewingAlbums && state.currentPath.length > 1) {
+            modals.showRemoveFromAlbumConfirmation(pathForAction, state.currentPath[1]);
+            return;
+        }
+
         modals.showConfirmationModal(pathForAction, isViewingTrash, false);
     });
 
@@ -281,9 +519,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         handleSelectionChange();
     });
 
+    dom.deselectAllBtn.addEventListener('click', () => {
+        resetSelection();
+    });
+
     dom.deleteSelectedBtn.addEventListener('click', () => {
+        if (isAlbumsMode() && state.currentPath.length > 1) {
+            modals.showRemoveFromAlbumConfirmation(state.selectedFiles, state.currentPath[1]);
+            return;
+        }
         const isPermanent = state.currentPath.includes(config.TRASH_FOLDER_NAME);
         modals.showConfirmationModal(state.selectedFiles, isPermanent);
+    });
+
+    dom.addToAlbumBtn.addEventListener('click', () => {
+        modals.showAddToAlbumModal(state.selectedFiles);
     });
 
     dom.restoreSelectedBtn.addEventListener('click', () => {
@@ -296,7 +546,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     dom.galleryContainer.addEventListener('dragover', (e) => {
         e.preventDefault();
-        if (!state.currentPath.includes(config.TRASH_FOLDER_NAME)) {
+        if (!state.currentPath.includes(config.TRASH_FOLDER_NAME) && !isAlbumsMode()) {
             dom.galleryContainer.classList.add('drag-over');
         }
     });
@@ -313,6 +563,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             ui.showMessage("Cannot upload files to the Trash folder.", "error");
             return;
         }
+        if (isAlbumsMode()) {
+            ui.showMessage("Cannot upload files directly in Albums view.", "error");
+            return;
+        }
         const files = Array.from(e.dataTransfer.files);
         if (files.length > 0) {
             state.setFilesToUpload(files);
@@ -321,25 +575,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // --- Login and Logout Listeners ---
-    dom.loginBtn.addEventListener('click', handleLogin);
-    dom.passwordInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') handleLogin();
-    });
-    dom.logoutBtn.addEventListener('click', handleLogout);
+    setupDragSelection();
 
-    // --- Initial Authentication Check ---
-    if (api.hasCredentials()) {
-        try {
-            await navigateToPath([]); // Try to load content with stored credentials
-        } catch (error) {
-            // This catch is for initial load. navigateToPath has its own more specific catch.
-            if (error.message === 'Unauthorized') {
-                api.clearCredentials();
-                showLoginModal('Your session has expired. Please login again.');
-            }
-        }
-    } else {
-        showLoginModal();
-    }
+    // Initial page load. If auth is needed, browser-level Basic auth handles it.
+    await navigateToPath([]);
 });

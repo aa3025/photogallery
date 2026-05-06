@@ -25,12 +25,15 @@ export function setTheme(theme) {
 export function updateActionButtonsVisibility() {
     const isLightboxActive = dom.lightboxOverlay.classList.contains('active');
     const isViewingTrash = state.currentPath.includes(config.TRASH_FOLDER_NAME);
+    const isViewingAlbums = state.currentPath[0] === config.ALBUMS_VIRTUAL_ROOT;
+    const isViewingAlbumContent = isViewingAlbums && state.currentPath.length > 1;
 
     dom.slideshowBtnBreadcrumb.classList.toggle('hidden', isViewingTrash);
 
     if (isLightboxActive) {
         dom.slideshowBtnLightbox.classList.remove('hidden');
-        dom.trashDeleteBtn.classList.remove('hidden');
+        dom.trashDeleteBtn.classList.toggle('hidden', isViewingAlbums && !isViewingAlbumContent);
+        dom.trashDeleteBtn.title = isViewingAlbumContent ? 'Remove From Album' : 'Move to Trash';
         dom.trashRestoreBtn.classList.toggle('hidden', !isViewingTrash);
         const mediaItem = state.currentDisplayedMedia[state.currentMediaIndex];
         const isRaw = mediaItem && config.RAW_EXTENSIONS.includes('.' + mediaItem.filename.split('.').pop().toLowerCase());
@@ -42,7 +45,7 @@ export function updateActionButtonsVisibility() {
         dom.downloadRawBtn.classList.add('hidden');
     }
 
-    dom.uploadFilesBtn.classList.toggle('hidden', isViewingTrash);
+    dom.uploadFilesBtn.classList.toggle('hidden', isViewingTrash || isViewingAlbums);
     // REMOVED emptyTrashBtn and restoreAllBtn logic
 }
 
@@ -54,6 +57,11 @@ export function updateBreadcrumb(onNavigate) {
     const homeBtn = createFolderNavLink("Home", [], null, false, true, onNavigate);
     dom.breadcrumbPathContent.appendChild(homeBtn);
 
+    if (state.currentPath.length === 0) {
+        const albumsBtn = createFolderNavLink("Albums", [config.ALBUMS_VIRTUAL_ROOT], null, false, true, onNavigate, 'photo_library');
+        dom.breadcrumbPathContent.appendChild(albumsBtn);
+    }
+
     if (state.currentPath.length > 0) {
         const separator = document.createElement('span');
         separator.className = 'breadcrumb-separator';
@@ -63,7 +71,10 @@ export function updateBreadcrumb(onNavigate) {
 
     state.currentPath.forEach((segment, index) => {
         const path = state.currentPath.slice(0, index + 1);
-        const link = createFolderNavLink(segment, path, null, segment === config.TRASH_FOLDER_NAME, true, onNavigate);
+        const isAlbumsRoot = segment === config.ALBUMS_VIRTUAL_ROOT;
+        const displayName = isAlbumsRoot ? 'Albums' : segment;
+        const iconName = isAlbumsRoot ? 'photo_library' : undefined;
+        const link = createFolderNavLink(displayName, path, null, segment === config.TRASH_FOLDER_NAME, true, onNavigate, iconName);
         dom.breadcrumbPathContent.appendChild(link);
 
         if (index < state.currentPath.length - 1) {
@@ -76,7 +87,7 @@ export function updateBreadcrumb(onNavigate) {
 }
 
 // --- Element Creation ---
-export function createFolderNavLink(folderName, pathSegments, count, isTrash, isBreadcrumb, onNavigate) {
+export function createFolderNavLink(folderName, pathSegments, count, isTrash, isBreadcrumb, onNavigate, iconName = null) {
     const link = document.createElement('a');
     link.href = "#";
     link.className = 'nav-link folder-nav-button';
@@ -89,6 +100,7 @@ export function createFolderNavLink(folderName, pathSegments, count, isTrash, is
     if (isBreadcrumb) {
         link.classList.add('breadcrumb-folder-link');
         if (folderName === "Home") link.classList.add('home-breadcrumb-btn');
+        if (folderName === "Albums") link.classList.add('albums-breadcrumb-btn');
     }
 
     const folderIconWrapper = document.createElement('div');
@@ -96,7 +108,7 @@ export function createFolderNavLink(folderName, pathSegments, count, isTrash, is
 
     const folderIcon = document.createElement('i');
     folderIcon.className = 'material-icons folder-icon';
-    folderIcon.textContent = isTrash ? 'delete' : (folderName === "Home" ? 'home' : 'folder');
+    folderIcon.textContent = iconName || (isTrash ? 'delete' : (folderName === "Home" ? 'home' : 'folder'));
 
     const nameText = document.createElement('span');
     nameText.className = 'folder-name-overlay';
@@ -112,14 +124,14 @@ export function createFolderNavLink(folderName, pathSegments, count, isTrash, is
         link.appendChild(countText);
     }
 
-    if (!isTrash && !isBreadcrumb) {
+    if (!isTrash && !isBreadcrumb && iconName !== 'folder_special') {
         const deleteBtn = document.createElement('div');
         deleteBtn.className = 'delete-folder-btn';
         deleteBtn.innerHTML = '<i class="material-icons">close</i>';
         deleteBtn.title = `Delete folder ${folderName}`;
         deleteBtn.onclick = (e) => {
             e.stopPropagation();
-            showConfirmationModal(pathSegments, false, false);
+            showConfirmationModal(pathSegments, false, false, true);
         };
         link.appendChild(deleteBtn);
     }
@@ -148,6 +160,25 @@ export function createAddFolderButton() {
         e.preventDefault();
         showCreateFolderModal();
     };
+    return button;
+}
+
+export function createAddAlbumButton(onCreateAlbum) {
+    const button = document.createElement('a');
+    button.href = "#";
+    button.classList.add('nav-link', 'folder-nav-button', 'add-folder-square-btn');
+    button.title = "Create New Album";
+
+    const icon = document.createElement('i');
+    icon.classList.add('material-icons');
+    icon.textContent = 'create_new_folder';
+
+    button.appendChild(icon);
+    button.onclick = (e) => {
+        e.preventDefault();
+        onCreateAlbum();
+    };
+
     return button;
 }
 

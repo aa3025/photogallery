@@ -20,12 +20,14 @@ export function initDOMElements() {
     dom.trashRestoreBtn = document.getElementById('trashRestoreBtn');
     dom.downloadRawBtn = document.getElementById('downloadRawBtn');
     dom.homeBtnTopRight = document.getElementById('homeBtnTopRight');
+    dom.albumsBtnTopRight = document.getElementById('albumsBtnTopRight');
     dom.themeToggleButton = document.getElementById('themeToggleButton');
     dom.uploadFilesBtn = document.getElementById('uploadFilesBtn');
-    dom.logoutBtn = document.getElementById('logoutBtn');
 
     // --- Multi-Select Action Buttons ---
     dom.selectAllBtn = document.getElementById('selectAllBtn');
+    dom.deselectAllBtn = document.getElementById('deselectAllBtn');
+    dom.addToAlbumBtn = document.getElementById('addToAlbumBtn');
     dom.deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
     dom.selectedCount = document.getElementById('selectedCount');
     dom.restoreSelectedBtn = document.getElementById('restoreSelectedBtn');
@@ -56,6 +58,18 @@ export function initDOMElements() {
     dom.confirmCreateFolderBtn = document.getElementById('confirmCreateFolderBtn');
     dom.cancelCreateFolderBtn = document.getElementById('cancelCreateFolderBtn');
 
+    // --- Album Modals ---
+    dom.createAlbumModalOverlay = document.getElementById('createAlbumModalOverlay');
+    dom.newAlbumNameInput = document.getElementById('newAlbumNameInput');
+    dom.confirmCreateAlbumBtn = document.getElementById('confirmCreateAlbumBtn');
+    dom.cancelCreateAlbumBtn = document.getElementById('cancelCreateAlbumBtn');
+
+    dom.addToAlbumModalOverlay = document.getElementById('addToAlbumModalOverlay');
+    dom.existingAlbumsSelect = document.getElementById('existingAlbumsSelect');
+    dom.newAlbumNameForAddInput = document.getElementById('newAlbumNameForAddInput');
+    dom.confirmAddToAlbumBtn = document.getElementById('confirmAddToAlbumBtn');
+    dom.cancelAddToAlbumBtn = document.getElementById('cancelAddToAlbumBtn');
+
     // --- Upload Modal Elements ---
     dom.fileInput = document.getElementById('fileInput');
     dom.uploadProgressModalOverlay = document.getElementById('uploadProgressModalOverlay');
@@ -65,13 +79,6 @@ export function initDOMElements() {
     dom.startUploadBtn = document.getElementById('startUploadBtn');
     dom.cancelUploadBtn = document.getElementById('cancelUploadBtn');
     dom.uploadTargetFolderInfo = document.getElementById('uploadTargetFolderInfo');
-
-    // --- Login Modal Elements ---
-    dom.loginModalOverlay = document.getElementById('loginModalOverlay');
-    dom.usernameInput = document.getElementById('usernameInput');
-    dom.passwordInput = document.getElementById('passwordInput');
-    dom.loginBtn = document.getElementById('loginBtn');
-    dom.loginErrorMessage = document.getElementById('loginErrorMessage');
 
     // --- Message Box ---
     dom.messageBox = document.getElementById('messageBox');

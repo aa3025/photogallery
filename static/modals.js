@@ -10,8 +10,10 @@ import { closeLightbox, updateLightboxMedia } from './lightbox.js';
 let onNavigateCallback;
 
 // --- Confirmation Modal ---
-export function showConfirmationModal(actionTarget, isPermanentDelete = false, isRestore = false) {
-    state.setIsFolderDeletion(Array.isArray(actionTarget) && typeof actionTarget[0] !== 'string');
+export function showConfirmationModal(actionTarget, isPermanentDelete = false, isRestore = false, isFolderAction = false) {
+    state.setIsAlbumRemoval(false);
+    state.setAlbumToProcessName('');
+    state.setIsFolderDeletion(isFolderAction);
     if (state.isFolderDeletion) {
         state.setFolderToProcessPath(actionTarget);
         state.setFileToProcessPath('');
@@ -55,13 +57,34 @@ function hideConfirmationModal() {
     dom.confirmationModalOverlay.classList.remove('active');
 }
 
+export function showRemoveFromAlbumConfirmation(actionTarget, albumName) {
+    state.setIsAlbumRemoval(true);
+    state.setAlbumToProcessName(albumName);
+    state.setIsFolderDeletion(false);
+    state.setFolderToProcessPath([]);
+    state.setFileToProcessPath(actionTarget);
+
+    const count = Array.isArray(actionTarget) ? actionTarget.length : 1;
+    dom.confirmationMessage.textContent = `Remove ${count} item(s) from album '${albumName}'?`;
+    dom.confirmActionBtn.textContent = `Remove ${count} Item(s)`;
+    dom.confirmationModalOverlay.classList.add('active');
+}
+
 async function handleConfirmAction() {
     hideConfirmationModal();
     const wasLightboxActive = dom.lightboxOverlay.classList.contains('active');
     const oldIndex = state.currentMediaIndex;
 
     try {
-        if (Array.isArray(state.fileToProcessPath) && dom.confirmActionBtn.textContent.includes("Restore")) {
+        if (state.isAlbumRemoval) {
+            const paths = Array.isArray(state.fileToProcessPath)
+                ? state.fileToProcessPath
+                : [state.fileToProcessPath];
+            const result = await api.removeMediaFromAlbum(state.albumToProcessName, paths);
+            ui.showMessage(`${result.removed_count} item(s) removed from album.`, 'success');
+            state.setIsAlbumRemoval(false);
+            state.setAlbumToProcessName('');
+        } else if (Array.isArray(state.fileToProcessPath) && dom.confirmActionBtn.textContent.includes("Restore")) {
             await api.restoreMultiple(state.fileToProcessPath);
             ui.showMessage(`${state.fileToProcessPath.length} files restored.`, 'success');
         } else if (Array.isArray(state.fileToProcessPath)) {
@@ -133,6 +156,96 @@ async function handleCreateFolder() {
     }
 }
 
+export function showCreateAlbumModal() {
+    dom.newAlbumNameInput.value = '';
+    dom.createAlbumModalOverlay.classList.add('active');
+    dom.newAlbumNameInput.focus();
+}
+
+function hideCreateAlbumModal() {
+    dom.createAlbumModalOverlay.classList.remove('active');
+}
+
+async function handleCreateAlbum() {
+    const albumName = dom.newAlbumNameInput.value.trim();
+    if (!albumName) {
+        ui.showMessage('Album name cannot be empty.', 'error');
+        return;
+    }
+
+    try {
+        await api.createAlbum(albumName);
+        ui.showMessage(`Album '${albumName}' created.`, 'success');
+        hideCreateAlbumModal();
+        await onNavigateCallback(state.currentPath);
+    } catch (error) {
+        ui.showMessage(`Error: ${error.message}`, 'error');
+    }
+}
+
+export async function showAddToAlbumModal(paths) {
+    if (!Array.isArray(paths) || paths.length === 0) {
+        ui.showMessage('Select media first.', 'info');
+        return;
+    }
+
+    state.setAlbumSelectionPaths(paths);
+
+    try {
+        const data = await api.getAlbums();
+        dom.existingAlbumsSelect.innerHTML = '';
+
+        const createOption = document.createElement('option');
+        createOption.value = '__create_new__';
+        createOption.textContent = 'Create new album...';
+        dom.existingAlbumsSelect.appendChild(createOption);
+
+        (data.albums || []).forEach((album) => {
+            const option = document.createElement('option');
+            option.value = album.name;
+            option.textContent = album.name;
+            dom.existingAlbumsSelect.appendChild(option);
+        });
+
+        dom.existingAlbumsSelect.value = '__create_new__';
+        dom.newAlbumNameForAddInput.value = '';
+        dom.newAlbumNameForAddInput.classList.remove('hidden');
+        dom.addToAlbumModalOverlay.classList.add('active');
+        dom.newAlbumNameForAddInput.focus();
+    } catch (error) {
+        ui.showMessage(`Error loading albums: ${error.message}`, 'error');
+    }
+}
+
+function hideAddToAlbumModal() {
+    dom.addToAlbumModalOverlay.classList.remove('active');
+    state.setAlbumSelectionPaths([]);
+}
+
+function toggleAddAlbumInput() {
+    const creatingNew = dom.existingAlbumsSelect.value === '__create_new__';
+    dom.newAlbumNameForAddInput.classList.toggle('hidden', !creatingNew);
+}
+
+async function handleConfirmAddToAlbum() {
+    const creatingNew = dom.existingAlbumsSelect.value === '__create_new__';
+    const albumName = creatingNew ? dom.newAlbumNameForAddInput.value.trim() : dom.existingAlbumsSelect.value;
+
+    if (!albumName) {
+        ui.showMessage('Album name is required.', 'error');
+        return;
+    }
+
+    try {
+        const result = await api.addMediaToAlbum(albumName, state.albumSelectionPaths, creatingNew);
+        ui.showMessage(`Added ${result.added_count} item(s) to '${albumName}'.`, 'success');
+        hideAddToAlbumModal();
+        await onNavigateCallback(state.currentPath);
+    } catch (error) {
+        ui.showMessage(`Error: ${error.message}`, 'error');
+    }
+}
+
 // --- Upload Modal ---
 
 export function showUploadProgressModal() {
@@ -191,6 +304,17 @@ export function initializeModals(onNavigate) {
     dom.confirmCreateFolderBtn.addEventListener('click', handleCreateFolder);
     dom.cancelCreateFolderBtn.addEventListener('click', hideCreateFolderModal);
     dom.newFolderNameInput.addEventListener('keydown', (e) => e.key === 'Enter' && handleCreateFolder());
+
+    // Create Album Modal Listeners
+    dom.confirmCreateAlbumBtn.addEventListener('click', handleCreateAlbum);
+    dom.cancelCreateAlbumBtn.addEventListener('click', hideCreateAlbumModal);
+    dom.newAlbumNameInput.addEventListener('keydown', (e) => e.key === 'Enter' && handleCreateAlbum());
+
+    // Add To Album Modal Listeners
+    dom.existingAlbumsSelect.addEventListener('change', toggleAddAlbumInput);
+    dom.confirmAddToAlbumBtn.addEventListener('click', handleConfirmAddToAlbum);
+    dom.cancelAddToAlbumBtn.addEventListener('click', hideAddToAlbumModal);
+    dom.newAlbumNameForAddInput.addEventListener('keydown', (e) => e.key === 'Enter' && handleConfirmAddToAlbum());
 
     // Upload Modal Listeners
     dom.uploadFilesBtn.addEventListener('click', () => dom.fileInput.click());

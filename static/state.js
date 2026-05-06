@@ -29,6 +29,11 @@ export let isFolderDeletion = false; // Flag to differentiate between file and f
 export let filesToUpload = [];
 export let uploadedFilesCount = 0;
 
+// --- Album Action State ---
+export let isAlbumRemoval = false;
+export let albumToProcessName = '';
+export let albumSelectionPaths = [];
+
 // --- State Modifier Functions ---
 
 export function setCurrentPath(newPath) {
@@ -81,4 +86,16 @@ export function setFilesToUpload(files) {
 
 export function setUploadedFilesCount(count) {
     uploadedFilesCount = count;
+}
+
+export function setIsAlbumRemoval(isRemoving) {
+    isAlbumRemoval = isRemoving;
+}
+
+export function setAlbumToProcessName(name) {
+    albumToProcessName = name;
+}
+
+export function setAlbumSelectionPaths(paths) {
+    albumSelectionPaths = paths;
 }

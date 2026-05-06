@@ -19,15 +19,24 @@ Demo: http://143.47.246.212:8080
 - **Interactive Lightbox**: View media in a fullscreen overlay with smooth zoom, pan, and keyboard navigation.
 - **Recursive Slideshow**: Start a slideshow from any folder to view all media within it and its subfolders. Root-level files are intelligently played first.
 
-### 🗑️ Full Trash System
+### 🗑️ Trash System
 
 - Move individual files, multiple files, or entire folders to a dedicated Trash folder.
-- Restore selected items, multiple items, or all items from the trash to their original locations.
-- Permanently delete selected items or empty the entire trash.
+- Restore individual or selected items from the trash to their original locations.
+- Permanently delete selected items from the trash.
 
 ### 🧰 Multi-Select
 
-- Select multiple files in the gallery view to perform batch actions (delete, restore, or permanent delete).
+- Select multiple files in the gallery view to perform batch actions (delete, restore, permanent delete, or add to album).
+- Use drag-select with a rectangle to add groups of tiles quickly, including auto-scroll near the viewport edges.
+- Clear the current selection with `Esc` or the `Deselect All` toolbar button.
+
+### 🖼️ Virtual Albums
+
+- Create albums directly in the app.
+- Add selected items from any folder into an album.
+- Remove items from an album without deleting the underlying media file.
+- Album data is stored in a JSON database, typically `${GALLERY_PATH}/albums.json`.
 
 ### 🗂️ File & Folder Management
 
@@ -45,7 +54,7 @@ Demo: http://143.47.246.212:8080
 - **Backend**: Python 3, Flask  
 - **Image/Video Processing**: Pillow, OpenCV, rawpy, pillow-heif  
 - **Frontend**: HTML5, CSS3, Vanilla JavaScript (ES6 Modules)  
-- **Styling**: Tailwind CSS (via CDN for simplicity)  
+- **Styling**: Tailwind utility stylesheet plus custom CSS  
 
 ---
 
@@ -64,40 +73,63 @@ Follow these steps to get the gallery running on your local machine.
 **Clone the Repository:**
 
 ```bash
-git https://github.com/aa3025/photogallery
+git clone https://github.com/aa3025/photogallery
 cd photogallery
 ````
 
-**Create `requirements.txt`:**
+`requirements.txt` is already included in this repository.
 
-```text
-Flask
-Pillow
-rawpy
-opencv-python
-numpy
-imageio
-pillow-heif
+**Preferred startup flow:**
+
+```bash
+./start_server.sh
 ```
 
-**Install Dependencies:**
+On first run, this script:
+
+- creates `.venv` if missing
+- installs dependencies from `requirements.txt`
+- creates `.gallery.env` with placeholder values if it does not exist
+
+Then update `.gallery.env` with real values:
+
+```bash
+export GALLERY_USERNAME='your_username'
+export GALLERY_PASSWORD='your_strong_password'
+export GALLERY_PATH='/absolute/path/to/your/gallery'
+export GALLERY_PORT='8080'
+export GALLERY_ALBUMS_DB_PATH="${GALLERY_PATH}/albums.json"
+```
+
+**Manual dependency install (optional):**
 
 ```bash
 pip3 install -r requirements.txt
 ```
 
-If you have trouble installing opencv-python, you can just disable the ``import cv2`` line in the beginning of ``server.py`` (it is only needed for video thumbnails)
+If you have trouble installing `opencv-python`, you can disable the `import cv2` line near the top of `server.py`.
+It is only needed for video thumbnail generation.
 
+### 3. Runtime Configuration
 
-**Configure `server.py`:**
+`server.py` still contains fallback placeholder defaults, but the active runtime configuration should come from environment variables or `.gallery.env`.
 
-```python
-######## YOUR SETUP #############
+Required variables:
 
-PORT = 8080  # The port you want the server to run on
-GALLERY = '/path/to/your/photos'  # Set the ABSOLUTE path to your photo library
+```bash
+export GALLERY_USERNAME='your_username'
+export GALLERY_PASSWORD='your_strong_password'
+export GALLERY_PATH='/absolute/path/to/your/gallery'
+```
 
-#################################
+Optional runtime variables:
+
+```bash
+export GALLERY_PORT='8080'
+export FLASK_DEBUG=0
+export GALLERY_SSL_CERT='/absolute/path/to/cert.pem'
+export GALLERY_SSL_KEY='/absolute/path/to/key.pem'
+export GALLERY_ALBUMS_DB_PATH="${GALLERY_PATH}/albums.json"
 ```
 
 **(Optional) Set Up SSL (for HTTPS):**
@@ -110,11 +142,11 @@ openssl req -x509 -newkey rsa:4096 -nodes -out cert.pem -keyout key.pem -days 36
 
 > Press `Enter` to accept the defaults for all prompts.
 
-To run without HTTPS, open `server.py`, find the last line, and **comment out** the `ssl_context` part.
+If `GALLERY_SSL_CERT` and `GALLERY_SSL_KEY` are not set, the app runs over HTTP.
 
 ---
 
-### 3. Frontend Setup
+### 4. Frontend Setup
 
 Folder named `static` in your project root contains all frontend files.
 
@@ -134,9 +166,15 @@ Folder named `static` in your project root contains all frontend files.
 
 ---
 
-### 4. Running the Application
+### 5. Running the Application
 
-In your terminal, from the project root:
+Preferred:
+
+```bash
+./start_server.sh
+```
+
+Manual alternative, from the project root after your environment is configured:
 
 ```bash
 python3 server.py
@@ -144,13 +182,19 @@ python3 server.py
 
 The server will perform a one-time scan to index your folders.
 
+To stop the app:
+
+```bash
+./kill_server.sh
+```
+
 Once running, open your browser and visit:
 
 ```
 http://localhost:8080
 ```
 
-(there is also an option to serve via https://, see last line of `server.py` file)
+(there is also an option to serve via HTTPS when `GALLERY_SSL_CERT` and `GALLERY_SSL_KEY` are set)
 
 ---
 
@@ -162,6 +206,11 @@ http://localhost:8080
 | `GET`    | `/api/recursive_media/<path>` | Gets all media files recursively from a path     |
 | `GET`    | `/api/media/<path>`           | Serves a specific media file (RAW/HEIC to WEBP)  |
 | `GET`    | `/api/thumbnail/<path>`       | Serves a generated thumbnail for a media file    |
+| `GET`    | `/api/albums`                 | Lists all virtual albums                         |
+| `GET`    | `/api/albums/<path>`          | Gets media in a specific album                   |
+| `POST`   | `/api/albums`                 | Creates a new album                              |
+| `POST`   | `/api/albums/add`             | Adds media paths to an album                     |
+| `POST`   | `/api/albums/remove`          | Removes media paths from an album                |
 | `POST`   | `/api/move_to_trash`          | Moves a file to the trash                        |
 | `POST`   | `/api/restore_file`           | Restores a single file from the trash            |
 | `DELETE` | `/api/delete_file_forever`    | Permanently deletes a file from the trash        |

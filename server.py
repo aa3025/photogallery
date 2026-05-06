@@ -9,6 +9,7 @@ GALLERY='/absolute/path/to/my/gallery' # all the gallery photo files are here
 import os
 import json
 import shutil
+import hmac
 from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_httpauth import HTTPBasicAuth # ADDED: Import for authentication
@@ -32,22 +33,86 @@ app = Flask(__name__)
 auth = HTTPBasicAuth() # ADDED: Initialize the authentication handler
 
 # --- User Authentication ---
-# ADDED: Credentials for the server
-users = {
-    "user": "gallery"
-}
+AUTH_USERNAME = os.getenv('GALLERY_USERNAME')
+AUTH_PASSWORD = os.getenv('GALLERY_PASSWORD')
+
+if not AUTH_USERNAME or not AUTH_PASSWORD:
+    raise RuntimeError(
+        "Missing required credentials. Set GALLERY_USERNAME and GALLERY_PASSWORD environment variables."
+    )
 
 @auth.verify_password
 def verify_password(username, password):
     """Verifies the username and password."""
-    if username in users and users[username] == password:
+    if hmac.compare_digest(username, AUTH_USERNAME) and hmac.compare_digest(password, AUTH_PASSWORD):
         return username
 # --- End of Authentication ---
 
+
+def _normalize_path(path):
+    """Normalizes path resolution for robust boundary checks."""
+    return os.path.realpath(os.path.abspath(path))
+
+
+def _is_within_root(path, root):
+    """Returns True if path is within root after normalization."""
+    normalized_path = _normalize_path(path)
+    normalized_root = _normalize_path(root)
+    try:
+        return os.path.commonpath([normalized_path, normalized_root]) == normalized_root
+    except ValueError:
+        return False
+
+
+def _resolve_in_root(root, *segments):
+    """Resolves a path under root and rejects traversal outside root."""
+    candidate = _normalize_path(os.path.join(root, *segments))
+    if not _is_within_root(candidate, root):
+        raise ValueError("Forbidden path")
+    return candidate
+
 # --- Configuration ---
-image_library_root = os.path.abspath(GALLERY)
+gallery_root_from_env = os.getenv('GALLERY_PATH', GALLERY)
+
+if not gallery_root_from_env:
+    raise RuntimeError("Missing gallery path. Set GALLERY_PATH environment variable.")
+
+if not os.path.isabs(gallery_root_from_env):
+    raise RuntimeError("GALLERY_PATH must be an absolute path.")
+
+image_library_root = _normalize_path(gallery_root_from_env)
+
+
+def _detect_albums_store_path():
+    """Finds the JSON albums store path, preferring explicit environment configuration."""
+    configured_db_path = os.getenv('GALLERY_ALBUMS_DB_PATH')
+    if configured_db_path:
+        if not os.path.isabs(configured_db_path):
+            raise RuntimeError("GALLERY_ALBUMS_DB_PATH must be an absolute path.")
+        return _normalize_path(configured_db_path)
+
+    configured_legacy = os.getenv('GALLERY_ALBUMS_PATH')
+    if configured_legacy:
+        if not os.path.isabs(configured_legacy):
+            raise RuntimeError("GALLERY_ALBUMS_PATH must be an absolute path.")
+        resolved = _normalize_path(configured_legacy)
+        if resolved.lower().endswith('.json'):
+            return resolved
+        return _normalize_path(os.path.join(resolved, 'albums.json'))
+
+    server_dir = _normalize_path(os.path.dirname(__file__))
+    return _normalize_path(os.path.join(server_dir, '.albums.json'))
+
+
+albums_store_path = _detect_albums_store_path()
+
+try:
+    PORT = int(os.getenv('GALLERY_PORT', str(PORT)))
+except ValueError:
+    raise RuntimeError("GALLERY_PORT must be a valid integer.")
+
 TRASH_FOLDER_NAME = '_Trash'
-TRASH_ROOT = os.path.join(image_library_root, TRASH_FOLDER_NAME)
+TRASH_ROOT = _resolve_in_root(image_library_root, TRASH_FOLDER_NAME)
 COUNT_META_FILENAME = '_count.meta'
 THUMBNAIL_SUBFOLDER_NAME = '.thumbnails'
 PREVIEW_SUBFOLDER_NAME = '.previews'
@@ -73,6 +138,101 @@ ALL_MEDIA_EXTENSIONS = ALLOWED_IMAGE_EXTENSIONS.union(ALLOWED_RAW_EXTENSIONS).un
 
 os.makedirs(image_library_root, exist_ok=True)
 os.makedirs(TRASH_ROOT, exist_ok=True)
+
+
+def _ensure_albums_store_exists():
+    """Creates the albums store file if missing."""
+    parent = os.path.dirname(albums_store_path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+
+    if os.path.exists(albums_store_path):
+        return
+
+    with open(albums_store_path, 'w', encoding='utf-8') as f:
+        json.dump({"albums": {}}, f, indent=2)
+
+
+def _load_albums_store():
+    """Loads albums JSON in the shape {"albums": {name: [original_path, ...]}}."""
+    _ensure_albums_store_exists()
+    try:
+        with open(albums_store_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except Exception:
+        data = {"albums": {}}
+
+    if not isinstance(data, dict):
+        data = {"albums": {}}
+
+    albums = data.get('albums')
+    if not isinstance(albums, dict):
+        data['albums'] = {}
+        return data
+
+    normalized_albums = {}
+    for name, values in albums.items():
+        if not isinstance(name, str):
+            continue
+        if not isinstance(values, list):
+            continue
+        clean_name = name.strip()
+        if not clean_name:
+            continue
+        normalized_paths = []
+        seen = set()
+        for value in values:
+            if not isinstance(value, str):
+                continue
+            path = value.strip().replace('\\', '/')
+            if not path:
+                continue
+            key = path.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            normalized_paths.append(path)
+        normalized_albums[clean_name] = normalized_paths
+
+    data['albums'] = normalized_albums
+    return data
+
+
+def _save_albums_store(data):
+    """Persists albums JSON atomically to avoid partial writes."""
+    _ensure_albums_store_exists()
+    temp_path = f"{albums_store_path}.tmp"
+    with open(temp_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2)
+    os.replace(temp_path, albums_store_path)
+
+
+def _sanitize_album_name(name):
+    """Returns a safe album name for storage keys."""
+    safe_name = (name or '').strip()
+    if not safe_name:
+        raise ValueError("Album name is required")
+    if len(safe_name) > 120:
+        raise ValueError("Album name is too long")
+    return safe_name
+
+
+def _normalize_media_relative_path(path):
+    """Validates and normalizes a media path relative to gallery root."""
+    if not isinstance(path, str) or not path.strip():
+        raise ValueError("Invalid media path")
+
+    normalized_input = path.strip().replace('\\', '/')
+    full_path = _resolve_in_root(image_library_root, normalized_input)
+    if _is_within_root(full_path, TRASH_ROOT):
+        raise ValueError("Cannot add trashed files to albums")
+    if not os.path.isfile(full_path):
+        raise FileNotFoundError(f"Media not found: {normalized_input}")
+
+    relative = os.path.relpath(full_path, image_library_root).replace('\\', '/')
+    if not allowed_file(relative):
+        raise ValueError(f"Unsupported media type: {relative}")
+    return relative
 
 
 # --- Helper Functions (from gallery-server, adapted) ---
@@ -386,11 +546,40 @@ def _get_media_files_in_directory(path, include_subfolders=False):
     return sorted(media_files, key=lambda x: (x['original_path'].count('/'), x['original_path'].lower()))
 
 
+def _get_album_media(album_name):
+    """Resolves a stored album to concrete media items in the gallery root."""
+    safe_album_name = _sanitize_album_name(album_name)
+    store = _load_albums_store()
+    albums = store.get('albums', {})
+    if safe_album_name not in albums:
+        raise FileNotFoundError("Album not found")
+
+    requested_paths = albums.get(safe_album_name, [])
+    if not requested_paths:
+        return [], []
+
+    all_media = _get_media_files_in_directory(image_library_root, include_subfolders=True)
+    media_index = {item['original_path'].lower(): item for item in all_media}
+
+    media = []
+    missing = []
+
+    for path in requested_paths:
+        match = media_index.get(path.lower())
+        if not match:
+            missing.append(path)
+            continue
+        media.append(match)
+
+    return media, missing
+
+
 # --- API Endpoints ---
 
 @app.route('/')
+@auth.login_required
 def index():
-    """Serves the main HTML page. This is NOT password protected."""
+    """Serves the main HTML page behind HTTP Basic authentication."""
     return send_from_directory('static', 'index.html')
 
 @app.route('/api/folders', defaults={'path': ''})
@@ -399,7 +588,11 @@ def index():
 def get_folders(path):
     """Returns a list of subfolders and files for a given path."""
 
-    current_path = os.path.join(image_library_root, path)
+    try:
+        current_path = _resolve_in_root(image_library_root, path)
+    except ValueError:
+        return jsonify({"error": "Forbidden"}), 403
+
     if not os.path.isdir(current_path):
         return jsonify({"error": "Folder not found"}), 404
 
@@ -416,18 +609,172 @@ def get_folders(path):
             folders_data.append({"name": item, "count": count})
 
     month_map = {name: i for i, name in enumerate(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])}
-    folders_data.sort(key=lambda x: month_map.get(x['name'], x['name']))
+
+    def folder_sort_key(entry):
+        month_index = month_map.get(entry['name'])
+        if month_index is not None:
+            return (0, month_index, '')
+        return (1, 0, entry['name'].lower())
+
+    folders_data.sort(key=folder_sort_key)
 
     return jsonify({"folders": folders_data, "files": files_in_folder})
+
+
+@app.route('/api/albums')
+@auth.login_required
+def get_albums():
+    """Returns all albums from JSON store and resolved media counts."""
+    store = _load_albums_store()
+    albums_map = store.get('albums', {})
+    albums = []
+    for album_name in sorted(albums_map.keys(), key=str.lower):
+        media, missing = _get_album_media(album_name)
+        albums.append({
+            "name": album_name,
+            "count": len(media),
+            "missing_count": len(missing)
+        })
+
+    return jsonify({"albums": albums})
+
+
+@app.route('/api/albums/<path:album_name>')
+@auth.login_required
+def get_album_content(album_name):
+    """Returns resolved media for a specific album."""
+    try:
+        media, missing = _get_album_media(album_name)
+    except FileNotFoundError as exc:
+        return jsonify({"error": str(exc)}), 404
+    except ValueError:
+        return jsonify({"error": "Forbidden"}), 403
+
+    return jsonify({"files": media, "missing": missing})
+
+
+@app.route('/api/albums', methods=['POST'])
+@auth.login_required
+def create_album():
+    """Creates a new empty virtual album in the JSON store."""
+    data = request.get_json() or {}
+    try:
+        album_name = _sanitize_album_name(data.get('name'))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    store = _load_albums_store()
+    albums = store.get('albums', {})
+
+    if album_name in albums:
+        return jsonify({"error": "Album already exists"}), 409
+
+    albums[album_name] = []
+    store['albums'] = albums
+    _save_albums_store(store)
+    return jsonify({"message": "Album created", "name": album_name}), 201
+
+
+@app.route('/api/albums/add', methods=['POST'])
+@auth.login_required
+def add_media_to_album():
+    """Adds one or more media items to an album by original_path."""
+    data = request.get_json() or {}
+    paths = data.get('paths', [])
+    create_if_missing = bool(data.get('create_if_missing', False))
+
+    try:
+        album_name = _sanitize_album_name(data.get('album_name'))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    if not isinstance(paths, list) or not paths:
+        return jsonify({"error": "No media paths provided"}), 400
+
+    store = _load_albums_store()
+    albums = store.get('albums', {})
+    if album_name not in albums:
+        if create_if_missing:
+            albums[album_name] = []
+        else:
+            return jsonify({"error": "Album not found"}), 404
+
+    normalized_paths = []
+    errors = []
+    for path in paths:
+        try:
+            normalized_paths.append(_normalize_media_relative_path(path))
+        except Exception as exc:
+            errors.append(str(exc))
+
+    existing = albums.get(album_name, [])
+    existing_keys = {item.lower() for item in existing}
+    added_count = 0
+    for path in normalized_paths:
+        key = path.lower()
+        if key in existing_keys:
+            continue
+        existing_keys.add(key)
+        existing.append(path)
+        added_count += 1
+
+    albums[album_name] = existing
+    store['albums'] = albums
+    _save_albums_store(store)
+
+    return jsonify({
+        "message": "Media added to album",
+        "album_name": album_name,
+        "added_count": added_count,
+        "skipped_count": max(0, len(paths) - added_count - len(errors)),
+        "error_count": len(errors),
+        "errors": errors
+    })
+
+
+@app.route('/api/albums/remove', methods=['POST'])
+@auth.login_required
+def remove_media_from_album():
+    """Removes one or more media items from an album without deleting files."""
+    data = request.get_json() or {}
+    paths = data.get('paths', [])
+
+    try:
+        album_name = _sanitize_album_name(data.get('album_name'))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    if not isinstance(paths, list) or not paths:
+        return jsonify({"error": "No media paths provided"}), 400
+
+    store = _load_albums_store()
+    albums = store.get('albums', {})
+    if album_name not in albums:
+        return jsonify({"error": "Album not found"}), 404
+
+    to_remove = {str(path).strip().replace('\\', '/').lower() for path in paths if str(path).strip()}
+    existing = albums.get(album_name, [])
+    updated = [path for path in existing if path.lower() not in to_remove]
+    removed_count = len(existing) - len(updated)
+
+    albums[album_name] = updated
+    store['albums'] = albums
+    _save_albums_store(store)
+
+    return jsonify({
+        "message": "Media removed from album",
+        "album_name": album_name,
+        "removed_count": removed_count
+    })
 
 
 @app.route('/api/media/<path:relative_path>')
 @auth.login_required # MODIFIED: Add authentication decorator
 def get_media(relative_path):
     """Serves media files (images, videos, converted RAW/HEIC for display)."""
-    full_path = os.path.abspath(os.path.join(image_library_root, relative_path))
-
-    if not full_path.startswith(image_library_root):
+    try:
+        full_path = _resolve_in_root(image_library_root, relative_path)
+    except ValueError:
         return jsonify({"error": "Forbidden"}), 403
 
     if not os.path.exists(full_path):
@@ -455,9 +802,9 @@ def get_media(relative_path):
 @auth.login_required # MODIFIED: Add authentication decorator
 def get_thumbnail(relative_path):
     """Serves thumbnails for images and RAW files."""
-    full_media_path = os.path.abspath(os.path.join(image_library_root, relative_path))
-
-    if not full_media_path.startswith(image_library_root):
+    try:
+        full_media_path = _resolve_in_root(image_library_root, relative_path)
+    except ValueError:
         return jsonify({"error": "Forbidden"}), 403
 
     if not os.path.exists(full_media_path):
@@ -477,9 +824,9 @@ def get_thumbnail(relative_path):
 def get_recursive_media(path_segments):
     """Returns all media files recursively from a given path."""
     full_path_segments = path_segments.split('/') if path_segments else []
-    base_dir = os.path.abspath(os.path.join(image_library_root, *full_path_segments))
-
-    if not base_dir.startswith(image_library_root):
+    try:
+        base_dir = _resolve_in_root(image_library_root, *full_path_segments)
+    except ValueError:
         return jsonify({"error": "Forbidden"}), 403
 
     if not os.path.isdir(base_dir):
@@ -492,9 +839,9 @@ def get_recursive_media(path_segments):
 @auth.login_required # MODIFIED: Add authentication decorator
 def download_original_raw(relative_path):
     """Allows downloading of original RAW/HEIC files."""
-    full_path = os.path.abspath(os.path.join(image_library_root, relative_path))
-
-    if not full_path.startswith(image_library_root):
+    try:
+        full_path = _resolve_in_root(image_library_root, relative_path)
+    except ValueError:
         return jsonify({"error": "Forbidden"}), 403
 
     if not os.path.exists(full_path):
@@ -562,8 +909,12 @@ def move_to_trash():
     if not file_relative_path:
         return jsonify({"error": "Path not provided"}), 400
 
-    original_full_path = os.path.abspath(os.path.join(image_library_root, file_relative_path))
-    if not original_full_path.startswith(image_library_root) or TRASH_ROOT in original_full_path:
+    try:
+        original_full_path = _resolve_in_root(image_library_root, file_relative_path)
+    except ValueError:
+        return jsonify({"error": "Forbidden: Attempted to move file from outside media root."}), 403
+
+    if _is_within_root(original_full_path, TRASH_ROOT):
         return jsonify({"error": "Forbidden: Attempted to move file from outside media root or from trash."}), 403
 
     if not os.path.exists(original_full_path):
@@ -642,9 +993,12 @@ def delete_file_forever():
     if not file_relative_path_in_trash:
         return jsonify({"error": "Path not provided"}), 400
 
-    full_path_in_trash = os.path.abspath(os.path.join(image_library_root, file_relative_path_in_trash))
+    try:
+        full_path_in_trash = _resolve_in_root(image_library_root, file_relative_path_in_trash)
+    except ValueError:
+        return jsonify({"error": "Forbidden: Attempted to delete file outside of trash folder."}), 403
 
-    if not full_path_in_trash.startswith(TRASH_ROOT):
+    if not _is_within_root(full_path_in_trash, TRASH_ROOT):
         return jsonify({"error": "Forbidden: Attempted to delete file outside of trash folder."}), 403
 
     if not os.path.exists(full_path_in_trash):
@@ -669,13 +1023,13 @@ def delete_file_forever():
             os.remove(metadata_file_path)
 
         if trashed_thumbnail_path:
-            full_trashed_thumbnail_path = os.path.abspath(os.path.join(image_library_root, trashed_thumbnail_path))
-            if os.path.exists(full_trashed_thumbnail_path) and full_trashed_thumbnail_path.startswith(TRASH_ROOT):
+            full_trashed_thumbnail_path = _normalize_path(os.path.join(image_library_root, trashed_thumbnail_path))
+            if os.path.exists(full_trashed_thumbnail_path) and _is_within_root(full_trashed_thumbnail_path, TRASH_ROOT):
                 os.remove(full_trashed_thumbnail_path)
 
         if trashed_preview_path:
-            full_trashed_preview_path = os.path.abspath(os.path.join(image_library_root, trashed_preview_path))
-            if os.path.exists(full_trashed_preview_path) and full_trashed_preview_path.startswith(TRASH_ROOT):
+            full_trashed_preview_path = _normalize_path(os.path.join(image_library_root, trashed_preview_path))
+            if os.path.exists(full_trashed_preview_path) and _is_within_root(full_trashed_preview_path, TRASH_ROOT):
                 os.remove(full_trashed_preview_path)
 
         _update_folder_item_count_meta(TRASH_ROOT)
@@ -690,8 +1044,8 @@ def _restore_associated_file(final_restore_path, trashed_associated_path, path_g
     Helper to restore an associated file (thumbnail or preview).
     """
     if trashed_associated_path:
-        full_trashed_associated_path = os.path.abspath(os.path.join(image_library_root, trashed_associated_path))
-        if os.path.exists(full_trashed_associated_path) and full_trashed_associated_path.startswith(TRASH_ROOT):
+        full_trashed_associated_path = _normalize_path(os.path.join(image_library_root, trashed_associated_path))
+        if os.path.exists(full_trashed_associated_path) and _is_within_root(full_trashed_associated_path, TRASH_ROOT):
             expected_new_path = path_generator_func(final_restore_path)
             os.makedirs(os.path.dirname(expected_new_path), exist_ok=True)
             shutil.move(full_trashed_associated_path, expected_new_path)
@@ -734,10 +1088,16 @@ def create_folder():
     if not safe_folder_name:
         return jsonify({"error": "Invalid folder name"}), 400
 
-    full_parent_path = os.path.abspath(os.path.join(image_library_root, *parent_path_segments))
-    new_folder_full_path = os.path.join(full_parent_path, safe_folder_name)
+    if not isinstance(parent_path_segments, list) or not all(isinstance(segment, str) for segment in parent_path_segments):
+        return jsonify({"error": "Invalid parent_path format"}), 400
 
-    if not new_folder_full_path.startswith(image_library_root) or TRASH_ROOT in new_folder_full_path:
+    try:
+        full_parent_path = _resolve_in_root(image_library_root, *parent_path_segments)
+        new_folder_full_path = _resolve_in_root(full_parent_path, safe_folder_name)
+    except ValueError:
+        return jsonify({"error": "Forbidden: Cannot create folders outside media root."}), 403
+
+    if _is_within_root(new_folder_full_path, TRASH_ROOT):
         return jsonify({"error": "Forbidden: Cannot create folders outside media root or inside trash."}), 403
 
     if os.path.exists(new_folder_full_path):
@@ -771,20 +1131,36 @@ def upload_file():
     except json.JSONDecodeError:
         return jsonify({"error": "Invalid current_path format"}), 400
 
-    destination_dir = os.path.join(image_library_root, *current_path_segments)
+    if not isinstance(current_path_segments, list) or not all(isinstance(segment, str) for segment in current_path_segments):
+        return jsonify({"error": "Invalid current_path format"}), 400
+
+    safe_filename = secure_filename(file.filename)
+    if not safe_filename:
+        return jsonify({"error": "Invalid filename"}), 400
+
+    if not allowed_file(safe_filename):
+        return jsonify({"error": "Unsupported file type"}), 400
+
+    try:
+        destination_dir = _resolve_in_root(image_library_root, *current_path_segments)
+    except ValueError:
+        return jsonify({"error": "Forbidden upload path"}), 403
+
+    if _is_within_root(destination_dir, TRASH_ROOT):
+        return jsonify({"error": "Cannot upload files to trash."}), 403
+
     os.makedirs(destination_dir, exist_ok=True)
-    file_full_path = os.path.join(destination_dir, file.filename)
+    file_full_path = os.path.join(destination_dir, safe_filename)
 
     counter = 1
-    original_name, ext = os.path.splitext(file.filename)
+    original_name, ext = os.path.splitext(safe_filename)
     while os.path.exists(file_full_path):
         file_full_path = os.path.join(destination_dir, f"{original_name}_{counter}{ext}")
         counter += 1
 
     try:
         file.save(file_full_path)
-        if os.path.splitext(file.filename)[1].lower() in ALLOWED_IMAGE_EXTENSIONS or \
-           os.path.splitext(file.filename)[1].lower() in ALLOWED_RAW_EXTENSIONS:
+        if ext.lower() in ALLOWED_IMAGE_EXTENSIONS or ext.lower() in ALLOWED_RAW_EXTENSIONS:
             _generate_thumbnail(file_full_path)
 
         _update_folder_item_count_meta(destination_dir)
@@ -813,9 +1189,15 @@ def delete_folder():
         print(f"ERROR: Invalid path data type for delete_folder: {type(path_data)}")
         return jsonify({"error": "Invalid path format provided"}), 400
 
-    folder_full_path = os.path.abspath(os.path.join(image_library_root, *folder_path_segments))
+    if not all(isinstance(segment, str) for segment in folder_path_segments):
+        return jsonify({"error": "Invalid path format provided"}), 400
 
-    if not folder_full_path.startswith(image_library_root) or TRASH_ROOT in folder_full_path:
+    try:
+        folder_full_path = _resolve_in_root(image_library_root, *folder_path_segments)
+    except ValueError:
+        return jsonify({"error": "Forbidden: Cannot delete outside media root."}), 403
+
+    if folder_full_path == image_library_root or _is_within_root(folder_full_path, TRASH_ROOT):
         return jsonify({"error": "Forbidden: Cannot delete root media directory, trash folder, or outside media root."}), 403
 
     if not os.path.isdir(folder_full_path):
@@ -871,7 +1253,7 @@ def delete_folder():
         shutil.rmtree(folder_full_path)
 
         parent_folder_full_path = os.path.dirname(folder_full_path)
-        if parent_folder_full_path.startswith(image_library_root):
+        if _is_within_root(parent_folder_full_path, image_library_root):
             _update_folder_item_count_meta(parent_folder_full_path)
         _update_folder_item_count_meta(TRASH_ROOT)
 
@@ -939,8 +1321,8 @@ def delete_multiple():
     for path in paths:
         try:
             if is_permanent:
-                full_path = os.path.abspath(os.path.join(image_library_root, path))
-                if not full_path.startswith(TRASH_ROOT) or not os.path.exists(full_path):
+                full_path = _resolve_in_root(image_library_root, path)
+                if not _is_within_root(full_path, TRASH_ROOT) or not os.path.exists(full_path):
                     raise ValueError("File is not in trash or does not exist.")
 
                 metadata_file_path = f"{full_path}.meta"
@@ -952,17 +1334,19 @@ def delete_multiple():
                     trashed_thumbnail_path = metadata.get('trashed_thumbnail_path')
                     trashed_preview_path = metadata.get('trashed_preview_path')
                     if trashed_thumbnail_path:
-                        thumb_full_path = os.path.join(image_library_root, trashed_thumbnail_path)
-                        if os.path.exists(thumb_full_path): os.remove(thumb_full_path)
+                        thumb_full_path = _normalize_path(os.path.join(image_library_root, trashed_thumbnail_path))
+                        if os.path.exists(thumb_full_path) and _is_within_root(thumb_full_path, TRASH_ROOT):
+                            os.remove(thumb_full_path)
                     if trashed_preview_path:
-                        preview_full_path = os.path.join(image_library_root, trashed_preview_path)
-                        if os.path.exists(preview_full_path): os.remove(preview_full_path)
+                        preview_full_path = _normalize_path(os.path.join(image_library_root, trashed_preview_path))
+                        if os.path.exists(preview_full_path) and _is_within_root(preview_full_path, TRASH_ROOT):
+                            os.remove(preview_full_path)
                     os.remove(metadata_file_path)
                 os.remove(full_path)
 
             else:
-                original_full_path = os.path.abspath(os.path.join(image_library_root, path))
-                if not original_full_path.startswith(image_library_root) or not os.path.exists(original_full_path):
+                original_full_path = _resolve_in_root(image_library_root, path)
+                if _is_within_root(original_full_path, TRASH_ROOT) or not os.path.exists(original_full_path):
                     raise ValueError("File is not in media library or does not exist.")
 
                 move_to_trash_logic(path)
@@ -999,8 +1383,8 @@ def restore_multiple():
 
     for path in paths:
         try:
-            source_full_path = os.path.abspath(os.path.join(image_library_root, path))
-            if not source_full_path.startswith(TRASH_ROOT):
+            source_full_path = _resolve_in_root(image_library_root, path)
+            if not _is_within_root(source_full_path, TRASH_ROOT):
                 raise ValueError(f"File '{path}' is not in the trash folder.")
 
             final_restore_path = restore_file_logic(path)
@@ -1023,7 +1407,10 @@ def restore_multiple():
 
 def move_to_trash_logic(file_relative_path):
     """Refactored logic to move a single file to trash, to be reusable."""
-    original_full_path = os.path.abspath(os.path.join(image_library_root, file_relative_path))
+    original_full_path = _resolve_in_root(image_library_root, file_relative_path)
+
+    if _is_within_root(original_full_path, TRASH_ROOT):
+        raise ValueError("File is already in trash.")
 
     filename = os.path.basename(original_full_path)
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -1068,8 +1455,8 @@ def restore_file_logic(file_relative_path_in_trash):
     This function does NOT update folder counts. The caller is responsible.
     Returns the final path of the restored file.
     """
-    source_full_path_in_trash = os.path.abspath(os.path.join(image_library_root, file_relative_path_in_trash))
-    if not source_full_path_in_trash.startswith(TRASH_ROOT):
+    source_full_path_in_trash = _resolve_in_root(image_library_root, file_relative_path_in_trash)
+    if not _is_within_root(source_full_path_in_trash, TRASH_ROOT):
         raise ValueError("Forbidden: Attempted to restore file outside of trash folder.")
 
     if not os.path.exists(source_full_path_in_trash):
@@ -1088,7 +1475,9 @@ def restore_file_logic(file_relative_path_in_trash):
     if not original_relative_path:
         raise ValueError("Original path not found in metadata.")
 
-    original_full_path = os.path.abspath(os.path.join(image_library_root, original_relative_path))
+    original_full_path = _resolve_in_root(image_library_root, original_relative_path)
+    if _is_within_root(original_full_path, TRASH_ROOT):
+        raise ValueError("Invalid original path in metadata.")
     original_directory = os.path.dirname(original_full_path)
     os.makedirs(original_directory, exist_ok=True)
 
@@ -1110,10 +1499,10 @@ def restore_file_logic(file_relative_path_in_trash):
 
 
 if __name__ == '__main__':
+    _ensure_albums_store_exists()
     _initial_scan_and_populate_counts()
-    app.run(host='0.0.0.0', debug=True, port=PORT)
-
-
-
-# To run with SSL for local dev (you need to generate two pem files in the server.py directory)
-    #app.run(host='0.0.0.0', debug=True, port=PORT, ssl_context=('cert.pem', 'key.pem'))
+    debug_mode = os.getenv('FLASK_DEBUG', '0') == '1'
+    ssl_cert = os.getenv('GALLERY_SSL_CERT')
+    ssl_key = os.getenv('GALLERY_SSL_KEY')
+    ssl_context = (ssl_cert, ssl_key) if ssl_cert and ssl_key else None
+    app.run(host='0.0.0.0', debug=debug_mode, port=PORT, ssl_context=ssl_context)

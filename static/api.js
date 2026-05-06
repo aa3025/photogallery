@@ -1,69 +1,20 @@
 // This module handles all communication with the backend API.
 
-let credentials = null; // Holds the current user credentials
-
 /**
- * Sets the credentials for all subsequent API requests.
- * @param {string} username - The username.
- * @param {string} password - The password.
- */
-export function setCredentials(username, password) {
-    credentials = btoa(`${username}:${password}`); // Base64 encode the credentials
-    sessionStorage.setItem('gallery_credentials', credentials); // Store in session storage
-}
-
-/**
- * Clears the stored credentials for logging out.
- */
-export function clearCredentials() {
-    credentials = null;
-    sessionStorage.removeItem('gallery_credentials');
-}
-
-/**
- * Checks if credentials are currently set.
- * @returns {boolean} - True if credentials exist, false otherwise.
- */
-export function hasCredentials() {
-    if (!credentials) {
-        credentials = sessionStorage.getItem('gallery_credentials');
-    }
-    return credentials !== null;
-}
-
-
-/**
- * Gets the authorization headers for a fetch request.
- * @returns {HeadersInit} - The headers object.
- */
-function getAuthHeaders() {
-    if (!hasCredentials()) {
-        return { 'Content-Type': 'application/json' };
-    }
-    return {
-        'Authorization': `Basic ${credentials}`,
-        'Content-Type': 'application/json',
-    };
-}
-
-/**
- * A wrapper for the fetch API that includes authorization.
+ * A wrapper for fetch requests.
  * @param {string} url - The URL to fetch.
  * @param {RequestInit} options - The options for the fetch request.
  * @returns {Promise<Response>} - The fetch response promise.
  */
 async function authorizedFetch(url, options = {}) {
-    const authHeaders = getAuthHeaders();
-    
     // For FormData, we let the browser set the Content-Type
     const isFormData = options.body instanceof FormData;
 
     const finalOptions = {
         ...options,
         headers: {
-            // Remove Content-Type for FormData, keep it for others
-            ...(isFormData ? {} : { 'Content-Type': authHeaders['Content-Type'] }),
-            'Authorization': authHeaders.Authorization,
+            // Remove Content-Type for FormData, keep it for others.
+            ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
             ...options.headers,
         },
     };
@@ -81,6 +32,92 @@ export async function getFolders(pathSegments = []) {
     const path = pathSegments.join('/');
     const url = path ? `/api/folders/${path}` : '/api/folders';
     const response = await authorizedFetch(url);
+    if (response.status === 401) throw new Error('Unauthorized');
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
+    }
+    return response.json();
+}
+
+/**
+ * Fetches all configured albums and resolved file counts.
+ * @returns {Promise<object>} - A promise that resolves with album metadata.
+ */
+export async function getAlbums() {
+    const response = await authorizedFetch('/api/albums');
+    if (response.status === 401) throw new Error('Unauthorized');
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
+    }
+    return response.json();
+}
+
+/**
+ * Fetches media for a single album by album name.
+ * @param {string} albumName - The album name (CSV filename without extension).
+ * @returns {Promise<object>} - A promise that resolves with resolved album media.
+ */
+export async function getAlbumMedia(albumName) {
+    const response = await authorizedFetch(`/api/albums/${encodeURIComponent(albumName)}`);
+    if (response.status === 401) throw new Error('Unauthorized');
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
+    }
+    return response.json();
+}
+
+/**
+ * Creates a new album.
+ * @param {string} name - Album name.
+ * @returns {Promise<object>} - A promise with the API response.
+ */
+export async function createAlbum(name) {
+    const response = await authorizedFetch('/api/albums', {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+    });
+    if (response.status === 401) throw new Error('Unauthorized');
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
+    }
+    return response.json();
+}
+
+/**
+ * Adds media paths to an album.
+ * @param {string} albumName - Album name.
+ * @param {string[]} paths - original_path values.
+ * @param {boolean} createIfMissing - Whether to create the album if missing.
+ * @returns {Promise<object>} - A promise with the API response.
+ */
+export async function addMediaToAlbum(albumName, paths, createIfMissing = false) {
+    const response = await authorizedFetch('/api/albums/add', {
+        method: 'POST',
+        body: JSON.stringify({ album_name: albumName, paths, create_if_missing: createIfMissing }),
+    });
+    if (response.status === 401) throw new Error('Unauthorized');
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
+    }
+    return response.json();
+}
+
+/**
+ * Removes media paths from an album.
+ * @param {string} albumName - Album name.
+ * @param {string[]} paths - original_path values.
+ * @returns {Promise<object>} - A promise with the API response.
+ */
+export async function removeMediaFromAlbum(albumName, paths) {
+    const response = await authorizedFetch('/api/albums/remove', {
+        method: 'POST',
+        body: JSON.stringify({ album_name: albumName, paths }),
+    });
     if (response.status === 401) throw new Error('Unauthorized');
     if (!response.ok) {
         const errorText = await response.text();
