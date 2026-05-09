@@ -17,6 +17,7 @@ Demo: http://143.47.246.212:8080
 - **HEIC Support**: Automatically converts Apple's `.heic` format for web viewing on the fly.
 - **Automatic Thumbnail Generation**: Fast-loading `.webp` thumbnails are created automatically for all media types.
 - **Interactive Lightbox**: View media in a fullscreen overlay with smooth zoom, pan, and keyboard navigation.
+- **Touch-Friendly Lightbox Navigation**: On touch devices (mobile and touchscreen laptops/tablets), swipe left/right in lightbox for previous/next media with drag-follow transition and adjacent-media preloading for smoother first-swipe performance.
 - **Recursive Slideshow**: Start a slideshow from any folder to view all media within it and its subfolders. Root-level files are intelligently played first.
 
 ### 🗑️ Trash System
@@ -29,6 +30,7 @@ Demo: http://143.47.246.212:8080
 
 - Select multiple files in the gallery view to perform batch actions (delete, restore, permanent delete, or add to album).
 - Use drag-select with a rectangle to add groups of tiles quickly, including auto-scroll near the viewport edges.
+- Drag-select is automatically disabled on mobile browsers so swipe gestures are not blocked.
 - Clear the current selection with `Esc` or the `Deselect All` toolbar button.
 
 ### 🖼️ Virtual Albums
@@ -67,6 +69,7 @@ Follow these steps to get the gallery running on your local machine.
 - Python 3.7+
 - `pip` (Python package installer)
 - `openssl` (for generating SSL certificates)
+- `exiftool` (recommended for robust RAW embedded-preview fallback on problematic files)
 
 ### 2. Backend Setup
 
@@ -130,7 +133,13 @@ export FLASK_DEBUG=0
 export GALLERY_SSL_CERT='/absolute/path/to/cert.pem'
 export GALLERY_SSL_KEY='/absolute/path/to/key.pem'
 export GALLERY_ALBUMS_DB_PATH="${GALLERY_PATH}/albums.json"
+export GALLERY_EXIFTOOL_BIN='/opt/homebrew/bin/exiftool'
 ```
+
+Notes for RAW handling:
+- True RAW files are decoded with `rawpy` for full-size display in lightbox.
+- If RAW decoding fails, the server falls back to embedded previews via `rawpy`/`exiftool` to keep media viewable.
+- Some files may have a RAW extension (for example `.NEF`) but actually contain JPEG data; these are now detected and decoded directly as full images.
 
 **(Optional) Set Up SSL (for HTTPS):**
 
