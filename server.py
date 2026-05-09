@@ -10,11 +10,12 @@ import os
 import json
 import shutil
 import hmac
+import subprocess
 from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_httpauth import HTTPBasicAuth # ADDED: Import for authentication
 from werkzeug.utils import secure_filename
-from PIL import Image, ExifTags, __version__ as pillow_version
+from PIL import Image, ExifTags, UnidentifiedImageError, __version__ as pillow_version
 import rawpy
 import cv2
 import numpy as np
@@ -27,6 +28,12 @@ import io
 from pillow_heif import register_heif_opener
 
 register_heif_opener()
+
+_configured_exiftool = os.getenv('GALLERY_EXIFTOOL_BIN', '').strip()
+if _configured_exiftool:
+    EXIFTOOL_BIN = _configured_exiftool
+else:
+    EXIFTOOL_BIN = shutil.which('exiftool') or '/opt/homebrew/bin/exiftool'
 
 
 app = Flask(__name__)
@@ -371,20 +378,7 @@ def _generate_thumbnail(original_full_path):
                 print(f"ERROR: Could not open video {original_full_path}")
 
         elif file_extension in ALLOWED_RAW_EXTENSIONS:
-            try:
-                with rawpy.imread(original_full_path) as raw:
-                    rgb = raw.postprocess(use_camera_wb=True, no_auto_bright=True, output_bps=8)
-                    if not isinstance(rgb, np.ndarray):
-                        print(f"ERROR: rawpy.postprocess did not return a numpy array for {original_full_path}. Type: {type(rgb)}")
-                        img = None
-                    else:
-                        img = Image.fromarray(rgb)
-            except rawpy.LibRawError as raw_e:
-                print(f"ERROR: rawpy.LibRawError processing RAW thumbnail for {original_full_path}: {raw_e}")
-                img = None # Ensure img is None if rawpy fails
-            except Exception as raw_e:
-                print(f"ERROR: General error processing RAW thumbnail for {original_full_path} with rawpy: {type(raw_e).__name__}: {raw_e}")
-                img = None # Ensure img is None if rawpy fails
+            img = _load_raw_as_pil_image(original_full_path)
         elif file_extension in ALLOWED_IMAGE_EXTENSIONS: # Covers HEIC, JPG, PNG, etc.
             try:
                 img = Image.open(original_full_path)
@@ -436,6 +430,133 @@ def _get_preview_full_path(original_full_path):
     preview_filename = f"{os.path.splitext(base_filename)[0]}.webp"
     return os.path.join(preview_dir, preview_filename)
 
+def _extract_embedded_preview_with_exiftool(original_full_path):
+    """Attempts to extract an embedded JPEG preview from RAW using exiftool."""
+    # Try the most common embedded preview tags in priority order.
+    tag_candidates = [
+        'PreviewImage',
+        'JpgFromRaw',
+        'OtherImage',
+        'ThumbnailImage',
+        'PreviewTIFF'
+    ]
+
+    for tag in tag_candidates:
+        try:
+            result = subprocess.run(
+                [EXIFTOOL_BIN, '-b', f'-{tag}', original_full_path],
+                capture_output=True,
+                check=False
+            )
+        except FileNotFoundError:
+            print(
+                f"WARN: exiftool binary not found at '{EXIFTOOL_BIN}'; "
+                "cannot use embedded preview fallback."
+            )
+            return None
+        except Exception as exiftool_err:
+            print(
+                f"WARN: exiftool failed while extracting {tag} for {original_full_path}: "
+                f"{type(exiftool_err).__name__}: {exiftool_err}"
+            )
+            continue
+
+        if result.returncode != 0 or not result.stdout:
+            continue
+
+        try:
+            return Image.open(io.BytesIO(result.stdout)).convert('RGB')
+        except Exception as img_err:
+            # Some payloads are parseable by OpenCV but not directly by Pillow.
+            try:
+                payload = np.frombuffer(result.stdout, dtype=np.uint8)
+                decoded = cv2.imdecode(payload, cv2.IMREAD_COLOR)
+                if decoded is not None:
+                    rgb_frame = cv2.cvtColor(decoded, cv2.COLOR_BGR2RGB)
+                    return Image.fromarray(rgb_frame)
+            except Exception:
+                pass
+
+            print(
+                f"WARN: exiftool returned unusable {tag} payload for {original_full_path}: "
+                f"{type(img_err).__name__}: {img_err}"
+            )
+
+    return None
+
+def _load_raw_as_pil_image(original_full_path):
+    """Loads a RAW file into a PIL image with fallbacks for unsupported/problematic files."""
+    # Some files arrive with RAW extensions but contain standard encoded image data.
+    # Try Pillow first so mislabeled JPEG/PNG/etc. can be rendered at full size.
+    try:
+        with Image.open(original_full_path) as probe_img:
+            detected_format = (probe_img.format or '').upper()
+            if detected_format in {'JPEG', 'JPG', 'PNG', 'WEBP', 'TIFF', 'HEIF', 'AVIF'}:
+                print(
+                    f"WARN: File has RAW extension but decodes as {detected_format}: "
+                    f"{original_full_path}. Using Pillow decode."
+                )
+                return probe_img.convert('RGB')
+    except UnidentifiedImageError:
+        pass
+    except Exception as probe_err:
+        print(
+            f"WARN: Pillow probe failed for {original_full_path}: "
+            f"{type(probe_err).__name__}: {probe_err}"
+        )
+
+    try:
+        with rawpy.imread(original_full_path) as raw:
+            # First attempt: full-quality decode tuned for pleasing color.
+            try:
+                rgb = raw.postprocess(
+                    use_camera_wb=True,
+                    no_auto_bright=True,
+                    output_bps=8,
+                    gamma=(2.222, 4.5)
+                )
+                if isinstance(rgb, np.ndarray):
+                    return Image.fromarray(rgb)
+            except rawpy.LibRawError as primary_err:
+                print(
+                    f"WARN: Primary RAW decode failed for {original_full_path}: "
+                    f"{type(primary_err).__name__}: {primary_err}. Trying fallbacks."
+                )
+
+            # Second attempt: relaxed decode settings (helps on some camera/RAW variants).
+            try:
+                rgb = raw.postprocess(output_bps=8)
+                if isinstance(rgb, np.ndarray):
+                    return Image.fromarray(rgb)
+            except rawpy.LibRawError as relaxed_err:
+                print(
+                    f"WARN: Relaxed RAW decode failed for {original_full_path}: "
+                    f"{type(relaxed_err).__name__}: {relaxed_err}."
+                )
+
+            # Final fallback: embedded preview thumbnail from RAW file.
+            try:
+                thumb = raw.extract_thumb()
+                if thumb.format == rawpy.ThumbFormat.JPEG:
+                    return Image.open(io.BytesIO(thumb.data)).convert('RGB')
+                if thumb.format == rawpy.ThumbFormat.BITMAP and isinstance(thumb.data, np.ndarray):
+                    return Image.fromarray(thumb.data)
+                print(f"WARN: Unsupported embedded thumbnail format for {original_full_path}: {thumb.format}")
+            except Exception as thumb_err:
+                print(
+                    f"WARN: Embedded RAW thumbnail extraction failed for {original_full_path}: "
+                    f"{type(thumb_err).__name__}: {thumb_err}"
+                )
+    except Exception as open_err:
+        print(f"ERROR: Could not open RAW file {original_full_path}: {type(open_err).__name__}: {open_err}")
+
+    # Last resort fallback for files rawpy/libraw cannot decode reliably.
+    exiftool_preview = _extract_embedded_preview_with_exiftool(original_full_path)
+    if exiftool_preview is not None:
+        return exiftool_preview
+
+    return None
+
 def _generate_preview(original_full_path):
     """Generates a full-size preview for an image (including HEIC) or RAW file and saves it."""
     preview_path = _get_preview_full_path(original_full_path)
@@ -449,20 +570,7 @@ def _generate_preview(original_full_path):
         img = None
 
         if file_extension in ALLOWED_RAW_EXTENSIONS:
-            try:
-                with rawpy.imread(original_full_path) as raw:
-                    rgb = raw.postprocess(use_camera_wb=True, no_auto_bright=True, output_bps=8, gamma=(2.222, 4.5))
-                    if not isinstance(rgb, np.ndarray):
-                        print(f"ERROR: rawpy.postprocess did not return a numpy array for {original_full_path}. Type: {type(rgb)}")
-                        img = None
-                    else:
-                        img = Image.fromarray(rgb)
-            except rawpy.LibRawError as raw_e:
-                print(f"ERROR: rawpy.LibRawError processing RAW preview for {original_full_path}: {raw_e}")
-                img = None # Ensure img is None if rawpy fails
-            except Exception as raw_e:
-                print(f"ERROR: General error processing RAW preview for {original_full_path} with rawpy: {type(raw_e).__name__}: {raw_e}")
-                img = None # Ensure img is None if rawpy fails
+            img = _load_raw_as_pil_image(original_full_path)
         elif file_extension in ALLOWED_IMAGE_EXTENSIONS: # Covers HEIC, JPG, PNG, etc.
             try:
                 img = Image.open(original_full_path)

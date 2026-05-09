@@ -14,6 +14,27 @@ function isAlbumsMode(path = state.currentPath) {
     return path[0] === config.ALBUMS_VIRTUAL_ROOT;
 }
 
+function isMobileDevice() {
+    // Detect touch devices and mobile user agents
+    const hasTouchCapability = () => {
+        return (('ontouchstart' in window) ||
+                (navigator.maxTouchPoints > 0) ||
+                (navigator.msMaxTouchPoints > 0));
+    };
+
+    const isMobileUserAgent = () => {
+        const userAgent = navigator.userAgent || navigator.vendor || window.opera || '';
+        return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+    };
+
+    // Also check if device lacks hover capability (typical for mobile)
+    const lacksHoverCapability = () => {
+        return window.matchMedia('(hover: none)').matches;
+    };
+
+    return (hasTouchCapability() || isMobileUserAgent() || lacksHoverCapability());
+}
+
 const dragSelect = {
     isPointerDown: false,
     isDragging: false,
@@ -575,7 +596,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    setupDragSelection();
+    // Enable drag-to-select only on desktop devices (not on mobile where it interferes with swipe)
+    if (!isMobileDevice()) {
+        setupDragSelection();
+    }
 
     // Initial page load. If auth is needed, browser-level Basic auth handles it.
     await navigateToPath([]);

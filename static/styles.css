@@ -340,6 +340,15 @@
             opacity: 0;
             transition: opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease;
             z-index: 1010; /* Above the media */
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 48px;
+            min-height: 48px;
+        }
+        .lightbox-nav-arrow .material-icons {
+            font-size: 28px;
+            line-height: 1;
         }
         /* Lightbox-nav-arrow Dark Theme */
         body[data-theme='dark'] .lightbox-nav-arrow {
@@ -789,6 +798,7 @@
             max-width: 90vw;
             max-height: 90vh;
             overflow: hidden; /* ADDED: This will clip the zoomed image */
+            touch-action: pan-y; /* Let vertical gestures pass, while JS handles horizontal swipes */
         }
 
         /* --- Light Theme Overrides --- */
