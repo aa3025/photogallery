@@ -124,6 +124,7 @@ COUNT_META_FILENAME = '_count.meta'
 THUMBNAIL_SUBFOLDER_NAME = '.thumbnails'
 PREVIEW_SUBFOLDER_NAME = '.previews'
 THUMBNAIL_MAX_DIMENSION = 480
+RAW_PREVIEW_MIN_DIMENSION = 1600
 
 try:
     if tuple(map(int, pillow_version.split('.'))) >= (9, 1, 0):
@@ -434,8 +435,8 @@ def _extract_embedded_preview_with_exiftool(original_full_path):
     """Attempts to extract an embedded JPEG preview from RAW using exiftool."""
     # Try the most common embedded preview tags in priority order.
     tag_candidates = [
-        'PreviewImage',
         'JpgFromRaw',
+        'PreviewImage',
         'OtherImage',
         'ThumbnailImage',
         'PreviewTIFF'
@@ -484,14 +485,133 @@ def _extract_embedded_preview_with_exiftool(original_full_path):
 
     return None
 
+def _decode_raw_with_rawpy(raw_path):
+    """Decodes a RAW file via rawpy/libraw with conservative fallbacks."""
+    min_fallback_dimension = RAW_PREVIEW_MIN_DIMENSION
+
+    with rawpy.imread(raw_path) as raw:
+        # First attempt: full-quality decode tuned for pleasing color.
+        try:
+            rgb = raw.postprocess(
+                use_camera_wb=True,
+                no_auto_bright=True,
+                output_bps=8,
+                gamma=(2.222, 4.5)
+            )
+            if isinstance(rgb, np.ndarray):
+                return Image.fromarray(rgb)
+        except rawpy.LibRawError as primary_err:
+            print(
+                f"WARN: Primary RAW decode failed for {raw_path}: "
+                f"{type(primary_err).__name__}: {primary_err}. Trying fallbacks."
+            )
+
+        # Second attempt: relaxed decode settings (helps on some camera/RAW variants).
+        try:
+            rgb = raw.postprocess(output_bps=8)
+            if isinstance(rgb, np.ndarray):
+                return Image.fromarray(rgb)
+        except rawpy.LibRawError as relaxed_err:
+            print(
+                f"WARN: Relaxed RAW decode failed for {raw_path}: "
+                f"{type(relaxed_err).__name__}: {relaxed_err}."
+            )
+
+        # Final in-libraw fallback: embedded thumbnail from RAW file.
+        try:
+            thumb = raw.extract_thumb()
+            if thumb.format == rawpy.ThumbFormat.JPEG:
+                thumb_img = Image.open(io.BytesIO(thumb.data)).convert('RGB')
+                if max(thumb_img.size) >= min_fallback_dimension:
+                    return thumb_img
+                print(
+                    f"WARN: Embedded RAW JPEG thumbnail is too small for {raw_path}: "
+                    f"{thumb_img.size}. Trying exiftool fallback."
+                )
+            if thumb.format == rawpy.ThumbFormat.BITMAP and isinstance(thumb.data, np.ndarray):
+                thumb_img = Image.fromarray(thumb.data)
+                if max(thumb_img.size) >= min_fallback_dimension:
+                    return thumb_img
+                print(
+                    f"WARN: Embedded RAW bitmap thumbnail is too small for {raw_path}: "
+                    f"{thumb_img.size}. Trying exiftool fallback."
+                )
+            print(f"WARN: Unsupported embedded thumbnail format for {raw_path}: {thumb.format}")
+        except Exception as thumb_err:
+            print(
+                f"WARN: Embedded RAW thumbnail extraction failed for {raw_path}: "
+                f"{type(thumb_err).__name__}: {thumb_err}"
+            )
+
+    return None
+
+def _find_companion_raw_file(original_full_path):
+    """Finds a likely full RAW companion for alias-style names ending with '_' before extension."""
+    directory = os.path.dirname(original_full_path)
+    filename = os.path.basename(original_full_path)
+    base, ext = os.path.splitext(filename)
+
+    if not base.endswith('_'):
+        return None
+
+    prefix = base
+    try:
+        candidates = []
+        for entry in os.listdir(directory):
+            entry_path = os.path.join(directory, entry)
+            if not os.path.isfile(entry_path):
+                continue
+
+            entry_base, entry_ext = os.path.splitext(entry)
+            if entry_ext.lower() != ext.lower():
+                continue
+            if entry_base == base:
+                continue
+            if not entry_base.startswith(prefix):
+                continue
+
+            suffix = entry_base[len(prefix):]
+            if not suffix or not suffix.isdigit():
+                continue
+
+            size = os.path.getsize(entry_path)
+            candidates.append((size, entry_path))
+
+        if not candidates:
+            return None
+
+        # Prefer the largest candidate, which is typically the full RAW file.
+        candidates.sort(key=lambda item: item[0], reverse=True)
+        return candidates[0][1]
+    except Exception as e:
+        print(f"WARN: Failed to scan companion RAW candidates for {original_full_path}: {type(e).__name__}: {e}")
+        return None
+
 def _load_raw_as_pil_image(original_full_path):
     """Loads a RAW file into a PIL image with fallbacks for unsupported/problematic files."""
+    companion_raw_path = _find_companion_raw_file(original_full_path)
+    if companion_raw_path:
+        try:
+            print(
+                f"INFO: Using companion RAW for alias file {original_full_path} -> {companion_raw_path}"
+            )
+            companion_img = _decode_raw_with_rawpy(companion_raw_path)
+            if companion_img is not None:
+                return companion_img
+        except Exception as companion_err:
+            print(
+                f"WARN: Companion RAW decode failed for {companion_raw_path}: "
+                f"{type(companion_err).__name__}: {companion_err}"
+            )
+
     # Some files arrive with RAW extensions but contain standard encoded image data.
-    # Try Pillow first so mislabeled JPEG/PNG/etc. can be rendered at full size.
+    # Only short-circuit for clearly non-RAW encoded formats. Do not accept TIFF
+    # here because true NEF files are TIFF-based containers and Pillow may expose
+    # a low-resolution embedded image.
     try:
         with Image.open(original_full_path) as probe_img:
             detected_format = (probe_img.format or '').upper()
-            if detected_format in {'JPEG', 'JPG', 'PNG', 'WEBP', 'TIFF', 'HEIF', 'AVIF'}:
+            if detected_format in {'JPEG', 'JPG', 'PNG', 'WEBP', 'HEIF', 'AVIF'}:
                 print(
                     f"WARN: File has RAW extension but decodes as {detected_format}: "
                     f"{original_full_path}. Using Pillow decode."
@@ -506,49 +626,16 @@ def _load_raw_as_pil_image(original_full_path):
         )
 
     try:
-        with rawpy.imread(original_full_path) as raw:
-            # First attempt: full-quality decode tuned for pleasing color.
-            try:
-                rgb = raw.postprocess(
-                    use_camera_wb=True,
-                    no_auto_bright=True,
-                    output_bps=8,
-                    gamma=(2.222, 4.5)
-                )
-                if isinstance(rgb, np.ndarray):
-                    return Image.fromarray(rgb)
-            except rawpy.LibRawError as primary_err:
-                print(
-                    f"WARN: Primary RAW decode failed for {original_full_path}: "
-                    f"{type(primary_err).__name__}: {primary_err}. Trying fallbacks."
-                )
-
-            # Second attempt: relaxed decode settings (helps on some camera/RAW variants).
-            try:
-                rgb = raw.postprocess(output_bps=8)
-                if isinstance(rgb, np.ndarray):
-                    return Image.fromarray(rgb)
-            except rawpy.LibRawError as relaxed_err:
-                print(
-                    f"WARN: Relaxed RAW decode failed for {original_full_path}: "
-                    f"{type(relaxed_err).__name__}: {relaxed_err}."
-                )
-
-            # Final fallback: embedded preview thumbnail from RAW file.
-            try:
-                thumb = raw.extract_thumb()
-                if thumb.format == rawpy.ThumbFormat.JPEG:
-                    return Image.open(io.BytesIO(thumb.data)).convert('RGB')
-                if thumb.format == rawpy.ThumbFormat.BITMAP and isinstance(thumb.data, np.ndarray):
-                    return Image.fromarray(thumb.data)
-                print(f"WARN: Unsupported embedded thumbnail format for {original_full_path}: {thumb.format}")
-            except Exception as thumb_err:
-                print(
-                    f"WARN: Embedded RAW thumbnail extraction failed for {original_full_path}: "
-                    f"{type(thumb_err).__name__}: {thumb_err}"
-                )
+        decoded = _decode_raw_with_rawpy(original_full_path)
+        if decoded is not None:
+            return decoded
     except Exception as open_err:
         print(f"ERROR: Could not open RAW file {original_full_path}: {type(open_err).__name__}: {open_err}")
+
+    if companion_raw_path:
+        exiftool_preview = _extract_embedded_preview_with_exiftool(companion_raw_path)
+        if exiftool_preview is not None:
+            return exiftool_preview
 
     # Last resort fallback for files rawpy/libraw cannot decode reliably.
     exiftool_preview = _extract_embedded_preview_with_exiftool(original_full_path)
@@ -561,12 +648,28 @@ def _generate_preview(original_full_path):
     """Generates a full-size preview for an image (including HEIC) or RAW file and saves it."""
     preview_path = _get_preview_full_path(original_full_path)
     os.makedirs(os.path.dirname(preview_path), exist_ok=True) # Ensure preview dir exists
+    file_extension = os.path.splitext(original_full_path)[1].lower()
 
     if os.path.exists(preview_path) and os.path.getmtime(preview_path) >= os.path.getmtime(original_full_path):
-        return preview_path
+        # RAW previews created by old fallback logic can be tiny; regenerate them automatically.
+        if file_extension in ALLOWED_RAW_EXTENSIONS:
+            try:
+                with Image.open(preview_path) as existing_preview:
+                    if max(existing_preview.size) >= RAW_PREVIEW_MIN_DIMENSION:
+                        return preview_path
+                print(
+                    f"INFO: Regenerating undersized RAW preview {preview_path} "
+                    f"for source {original_full_path}."
+                )
+            except Exception as preview_probe_err:
+                print(
+                    f"WARN: Failed to inspect existing preview {preview_path}: "
+                    f"{type(preview_probe_err).__name__}: {preview_probe_err}. Regenerating."
+                )
+        else:
+            return preview_path
 
     try:
-        file_extension = os.path.splitext(original_full_path)[1].lower()
         img = None
 
         if file_extension in ALLOWED_RAW_EXTENSIONS:
@@ -895,7 +998,17 @@ def get_media(relative_path):
         try:
             preview_path = _generate_preview(full_path)
             if preview_path and os.path.exists(preview_path):
-                return send_from_directory(os.path.dirname(preview_path), os.path.basename(preview_path), mimetype='image/webp')
+                response = send_from_directory(
+                    os.path.dirname(preview_path),
+                    os.path.basename(preview_path),
+                    mimetype='image/webp',
+                    max_age=0
+                )
+                # Prevent sticky stale cache for generated previews when decode logic changes.
+                response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+                response.headers['Pragma'] = 'no-cache'
+                response.headers['Expires'] = '0'
+                return response
             else:
                 print(f"ERROR: get_media - Failed to generate preview for {full_path}")
                 return jsonify({"error": "Failed to generate preview"}), 500

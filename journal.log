@@ -258,3 +258,60 @@ Behavior Changes
 - The top-right action toolbar stays visible while scrolling, except inside lightbox.
 - Gallery multi-select behaves more like a desktop file explorer.
 - Tailwind no longer emits the runtime CDN warning in the browser console.
+
+2026-05-09
+Project: photogallery
+Task: Improve touch lightbox UX and harden RAW/NEF rendering fallbacks
+
+Summary
+- Added realistic swipe navigation in lightbox with drag-follow motion, snap transition, and adjacent-media preloading for smoother touch navigation.
+- Extended swipe support to touch-enabled desktop browsers (pointer-event fallback), not just mobile touch events.
+- Fixed lightbox arrow inconsistency on iPad by using matching icon styles for left/right controls.
+- Investigated RAW preview failures and identified that some `.NEF` files were actually JPEG payloads with mislabeled extensions.
+- Hardened RAW loader and fallback chain so problematic files remain viewable while preserving full-quality decoding for true RAW files.
+
+Detailed Changes
+
+1) static/lightbox.js
+- Added touch swipe gesture handling with horizontal-direction lock and threshold-based navigation.
+- Implemented drag-follow preview transition:
+  - current media follows finger movement
+  - adjacent media slides in from the swipe direction
+  - release triggers either commit-to-next/previous or snap-back
+- Added pointer-event gesture fallback for touch-enabled laptops/tablets.
+- Added adjacent preloading cache for smoother first-time swipes.
+
+2) static/index.html
+- Replaced asymmetric Unicode arrows with matching Material icons for consistent left/right appearance.
+
+3) static/styles.css
+- Updated lightbox arrow layout for consistent alignment and sizing across devices.
+- Added touch-action tuning (`pan-y`) for better horizontal swipe handling in lightbox.
+
+4) server.py
+- Added robust RAW decode helper with multi-step fallback chain.
+- Added exiftool embedded-preview extraction fallback:
+  - tries `PreviewImage`, `JpgFromRaw`, `OtherImage`, `ThumbnailImage`, `PreviewTIFF`
+  - includes OpenCV decode fallback for payloads Pillow cannot parse directly
+- Added configurable exiftool binary via `GALLERY_EXIFTOOL_BIN`.
+- Added RAW extension mismatch handling:
+  - if a `.NEF`/RAW extension file decodes as standard image (e.g. JPEG), serve it as full image instead of treating it as broken RAW.
+
+Investigation Notes
+- Reproduced RAW decode error in environment:
+  - rawpy: 0.26.1
+  - libraw: 0.22.0
+  - failing files raised `LibRawIOError: Input/output error`
+- exiftool analysis showed failing samples with `.NEF` extension were actually `FileType: JPEG`.
+- Verified true NEF file in same folder decodes correctly with rawpy full postprocess.
+
+Validation Performed
+- Editor diagnostics checks on touched frontend/backend files: no errors.
+- Verified exiftool availability in runtime (`/opt/homebrew/bin/exiftool`).
+- Verified embedded thumbnail extraction returns bytes for problematic files.
+- Verified rawpy full decode succeeds on a true NEF sample from same folder.
+
+Behavior Changes
+- Lightbox swipe experience is now closer to native mobile gallery behavior.
+- Touchscreen desktop users can swipe in lightbox as well.
+- RAW handling now distinguishes true RAW files from mislabeled non-RAW payloads, avoiding unnecessary low-quality fallback for mislabeled files.

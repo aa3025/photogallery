@@ -680,6 +680,7 @@
             justify-content: center;
             align-items: center;
         }
+        .hidden,
         .play_icon.hidden,
         .pause_icon.hidden,
         .light_mode_icon.hidden,
@@ -798,7 +799,7 @@
             max-width: 90vw;
             max-height: 90vh;
             overflow: hidden; /* ADDED: This will clip the zoomed image */
-            touch-action: pan-y; /* Let vertical gestures pass, while JS handles horizontal swipes */
+            touch-action: none; /* Lightbox handles swipe and pinch gestures directly */
         }
 
         /* --- Light Theme Overrides --- */

@@ -42,6 +42,7 @@ export function initDOMElements() {
     dom.lightboxPrev = document.getElementById('lightboxPrev');
     dom.lightboxNext = document.getElementById('lightboxNext');
     dom.lightboxClose = document.getElementById('lightboxClose');
+    dom.lightboxFullscreenBtn = document.getElementById('lightboxFullscreenBtn');
     dom.lightboxFilename = document.getElementById('lightboxFilename');
     dom.loadingSpinner = document.getElementById('loadingSpinner');
 
